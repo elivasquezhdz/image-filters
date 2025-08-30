@@ -1,0 +1,544 @@
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100 
+file 'q_ir/q_1_ir_20.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_20_R.jpg'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM.JPG'
+duration 0.100 
+file 'q_ir/Photo on 8-19-25 at 12.00 PM #2.JPG'
+duration 0.100
+file 'q_ir/q_1_ir_11.jpg'
+duration 0.100
+file 'q_ir/q_1_ir_11_R.jpg'
+duration 0.100 

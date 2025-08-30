@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>OpenCV.js TikTok Effect</title>
+  <style>
+    canvas { margin: 10px; }
+  </style>
+</head>
+<body>
+  <h2>TikTok RGB Shift with OpenCV.js</h2>
+  <input type="file" id="fileInput" accept="image/*">
+  <br>
+  <canvas id="canvasInput"></canvas>
+  <canvas id="canvasOutput"></canvas>
+
+  <script async src="https://docs.opencv.org/4.x/opencv.js" type="text/javascript"></script>
+  <script>
+    function onOpenCvReady() {
+      document.getElementById('fileInput').addEventListener('change', function (e) {
+        let file = e.target.files[0];
+        if (!file) return;
+
+        let img = new Image();
+        img.onload = function () {
+          let canvas = document.getElementById('canvasInput');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          let ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+
+          // Process with OpenCV
+          let src = cv.imread(canvas);
+          let dst = new cv.Mat();
+          let channels = new cv.MatVector();
+          cv.split(src, channels);
+
+          let width = src.cols;
+          let height = src.rows;
+          let shift = Math.floor(width * 0.1);
+
+          // Create shift matrices
+          let M_left = cv.matFromArray(2, 3, cv.CV_32F, [1, 0, -shift, 0, 1, 0]);
+          let M_right = cv.matFromArray(2, 3, cv.CV_32F, [1, 0, shift, 0, 1, 0]);
+
+          let blue = channels.get(0);
+          let green = channels.get(1);
+          let red = channels.get(2);
+
+          let blueShifted = new cv.Mat();
+          let redShifted = new cv.Mat();
+
+          cv.warpAffine(blue, blueShifted, M_left, new cv.Size(width, height));
+          cv.warpAffine(red, redShifted, M_right, new cv.Size(width, height));
+
+          let merged = new cv.Mat();
+          let shiftedChannels = new cv.MatVector();
+          shiftedChannels.push_back(blueShifted);
+          shiftedChannels.push_back(green);
+          shiftedChannels.push_back(redShifted);
+          cv.merge(shiftedChannels, merged);
+
+          cv.imshow('canvasOutput', merged);
+
+          // Cleanup
+          src.delete(); dst.delete(); merged.delete();
+          channels.delete(); shiftedChannels.delete();
+          blue.delete(); green.delete(); red.delete();
+          blueShifted.delete(); redShifted.delete();
+          M_left.delete(); M_right.delete();
+        };
+        img.src = URL.createObjectURL(file);
+      });
+    }
+  </script>
+</body>
+</html>

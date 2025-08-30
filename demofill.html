@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Live Image Fill with Camera – OpenCV.js</title>
+  <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady()" type="text/javascript"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f2f2f2;
+      text-align: center;
+      padding: 20px;
+    }
+    canvas, video {
+      border: 1px solid #ccc;
+      margin: 10px;
+      max-width: 45%;
+      height: auto;
+    }
+    .controls {
+      margin: 20px 0;
+    }
+    label {
+      margin: 0 10px;
+    }
+    button {
+      padding: 8px 16px;
+      margin: 10px;
+      font-size: 14px;
+    }
+    .canvas-container {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <h2>Live Fill  </h2>
+
+  <input type="file" id="fileInput" accept="image/*">
+  <button id="cameraBtn">Use Camera</button>
+  <button id="captureBtn" style="display:none;">📷 Capture</button>
+  <br><br>
+
+  <video id="video" width="400" height="300" autoplay playsinline style="display:none;"></video>
+
+  <div class="controls">
+    <label for="direction">Direction:</label>
+    <select id="direction">
+      <option value="left">Left</option>
+      <option value="right">Right</option>
+      <option value="up">Up</option>
+      <option value="down">Down</option>
+    </select>
+
+    <label for="percent">Fill %:</label>
+    <input type="range" id="percent" min="0" max="100" value="30">
+    <span id="percentValue">30%</span>
+  </div>
+
+  <div>
+    <button id="resetBtn">Reset</button>
+    <button id="downloadBtn">Download Result</button>
+  </div>
+
+  <div class="canvas-container">
+    <div>
+      <strong>Original</strong><br>
+      <canvas id="canvasInput"></canvas>
+    </div>
+    <div>
+      <strong>Transformed</strong><br>
+      <canvas id="canvasOutput"></canvas>
+    </div>
+  </div>
+
+<script>
+  let inputCanvas = document.getElementById("canvasInput");
+  let outputCanvas = document.getElementById("canvasOutput");
+  let directionSelect = document.getElementById("direction");
+  let percentSlider = document.getElementById("percent");
+  let percentValueLabel = document.getElementById("percentValue");
+  let resetBtn = document.getElementById("resetBtn");
+  let downloadBtn = document.getElementById("downloadBtn");
+  let cameraBtn = document.getElementById("cameraBtn");
+  let captureBtn = document.getElementById("captureBtn");
+  let video = document.getElementById("video");
+
+  let originalImage = null;
+  let originalImageMat = null;
+  let stream = null;
+
+  function onOpenCvReady() {
+    document.getElementById("fileInput").addEventListener("change", handleImageLoad);
+    percentSlider.addEventListener("input", () => {
+      percentValueLabel.textContent = percentSlider.value + "%";
+      redrawEffect();
+    });
+    directionSelect.addEventListener("change", redrawEffect);
+    resetBtn.addEventListener("click", resetImage);
+    downloadBtn.addEventListener("click", downloadOutput);
+    cameraBtn.addEventListener("click", startCamera);
+    captureBtn.addEventListener("click", captureFromCamera);
+  }
+
+  function handleImageLoad(event) {
+    stopCamera();
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const img = new Image();
+    img.onload = () => drawToCanvas(img);
+    img.src = URL.createObjectURL(file);
+  }
+
+  function drawToCanvas(img) {
+    inputCanvas.width = img.width;
+    inputCanvas.height = img.height;
+    outputCanvas.width = img.width;
+    outputCanvas.height = img.height;
+
+    const ctx = inputCanvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+
+    if (originalImageMat) originalImageMat.delete();
+    cv.imshow(inputCanvas, cv.imread(inputCanvas)); // force draw
+    originalImageMat = cv.imread(inputCanvas); // store clean copy
+    redrawEffect();
+  }
+
+  function redrawEffect() {
+    if (!originalImageMat) return;
+
+    const src = originalImageMat.clone();
+    const dst = src.clone();
+
+    const width = src.cols;
+    const height = src.rows;
+    const fillDirection = directionSelect.value;
+    const fillPercent = Math.min(1.0, Math.max(0.0, parseFloat(percentSlider.value) / 100));
+    const fillW = Math.floor(width * fillPercent);
+    const fillH = Math.floor(height * fillPercent);
+
+    if (fillDirection === 'left') {
+      const srcCol = Math.min(fillW, width - 1);
+      const col = src.roi(new cv.Rect(srcCol, 0, 1, height));
+      for (let x = 0; x < fillW; x++) {
+        col.copyTo(dst.roi(new cv.Rect(x, 0, 1, height)));
+      }
+      col.delete();
+    } else if (fillDirection === 'right') {
+      const srcCol = Math.max(width - fillW - 1, 0);
+      const col = src.roi(new cv.Rect(srcCol, 0, 1, height));
+      for (let x = width - fillW; x < width; x++) {
+        col.copyTo(dst.roi(new cv.Rect(x, 0, 1, height)));
+      }
+      col.delete();
+    } else if (fillDirection === 'up') {
+      const srcRow = Math.min(fillH, height - 1);
+      const row = src.roi(new cv.Rect(0, srcRow, width, 1));
+      for (let y = 0; y < fillH; y++) {
+        row.copyTo(dst.roi(new cv.Rect(0, y, width, 1)));
+      }
+      row.delete();
+    } else if (fillDirection === 'down') {
+      const srcRow = Math.max(height - fillH - 1, 0);
+      const row = src.roi(new cv.Rect(0, srcRow, width, 1));
+      for (let y = height - fillH; y < height; y++) {
+        row.copyTo(dst.roi(new cv.Rect(0, y, width, 1)));
+      }
+      row.delete();
+    }
+
+    cv.imshow(outputCanvas, dst);
+    src.delete();
+    dst.delete();
+  }
+
+  function resetImage() {
+    if (!originalImageMat) return;
+
+    // Copy original image back into input and output canvases
+    const temp = originalImageMat.clone();
+    cv.imshow(inputCanvas, temp);
+    cv.imshow(outputCanvas, temp);
+    temp.delete();
+  }
+
+  function downloadOutput() {
+    const link = document.createElement('a');
+    link.download = 'filled_image.png';
+    link.href = outputCanvas.toDataURL('image/png');
+    link.click();
+  }
+
+  function startCamera() {
+    if (stream) return;
+    navigator.mediaDevices.getUserMedia({ video: true }).then(s => {
+      stream = s;
+      video.srcObject = stream;
+      video.style.display = 'block';
+      captureBtn.style.display = 'inline-block';
+    }).catch(err => alert("Could not access camera: " + err));
+  }
+
+  function stopCamera() {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      stream = null;
+    }
+    video.style.display = 'none';
+    captureBtn.style.display = 'none';
+  }
+
+  function captureFromCamera() {
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    const img = new Image();
+    img.onload = () => drawToCanvas(img);
+    img.src = canvas.toDataURL('image/png');
+  }
+</script>
+
+  
+</body>
+</html>
