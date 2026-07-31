@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Filters — Boxes · Fill · Chroma Shift</title>
+<style>
+  :root{
+    --bg:#0f1115;
+    --panel:#181b22;
+    --panel-2:#20242e;
+    --border:#2b303b;
+    --text:#e7e9ee;
+    --muted:#9aa3b2;
+    --accent:#6ea8fe;
+    --accent-2:#7ee787;
+    --danger:#ff7b72;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%,#1b2130 0%,var(--bg) 55%);
+    color:var(--text);
+    min-height:100vh;
+    line-height:1.5;
+  }
+  header{
+    text-align:center;
+    padding:34px 20px 10px;
+  }
+  header h1{
+    margin:0;
+    font-size:clamp(1.6rem,4vw,2.4rem);
+    letter-spacing:.5px;
+  }
+  header p{
+    margin:8px auto 0;
+    max-width:620px;
+    color:var(--muted);
+    font-size:.98rem;
+  }
+  .tabs{
+    display:flex;
+    gap:8px;
+    justify-content:center;
+    flex-wrap:wrap;
+    margin:22px auto 6px;
+    padding:0 12px;
+  }
+  .tab{
+    background:var(--panel);
+    border:1px solid var(--border);
+    color:var(--muted);
+    padding:10px 18px;
+    border-radius:999px;
+    cursor:pointer;
+    font-size:.95rem;
+    transition:.15s;
+  }
+  .tab:hover{color:var(--text);border-color:#3a4150}
+  .tab.active{
+    background:var(--panel-2);
+    color:var(--text);
+    border-color:var(--accent);
+    box-shadow:0 0 0 1px var(--accent) inset;
+  }
+  main{max-width:1100px;margin:0 auto;padding:16px 16px 60px}
+  .view{display:none}
+  .view.active{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:20px;
+    margin-bottom:20px;
+  }
+  .card h2{margin:0 0 4px;font-size:1.2rem}
+  .card .desc{color:var(--muted);font-size:.9rem;margin:0 0 16px}
+  .controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:18px 26px;
+    align-items:flex-end;
+    margin-bottom:8px;
+  }
+  .control{display:flex;flex-direction:column;gap:6px;min-width:150px}
+  .control label{font-size:.82rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .control .val{color:var(--accent-2);font-weight:600}
+  input[type=range]{width:190px;accent-color:var(--accent)}
+  select,input[type=number]{
+    background:var(--panel-2);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:.9rem;
+  }
+  button{
+    background:var(--accent);
+    color:#0b1220;
+    border:none;
+    border-radius:9px;
+    padding:10px 16px;
+    font-size:.9rem;
+    font-weight:600;
+    cursor:pointer;
+    transition:.15s;
+  }
+  button:hover{filter:brightness(1.08)}
+  button.ghost{background:var(--panel-2);color:var(--text);border:1px solid var(--border)}
+  button.dl{background:var(--accent-2);color:#0b1220}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .filebar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px}
+  input[type=file]{
+    color:var(--muted);font-size:.88rem;
+  }
+  input[type=file]::file-selector-button{
+    background:var(--panel-2);color:var(--text);border:1px solid var(--border);
+    border-radius:8px;padding:8px 12px;margin-right:10px;cursor:pointer;
+  }
+  .canvas-wrap{
+    display:flex;flex-wrap:wrap;gap:20px;justify-content:center;margin-top:18px;
+  }
+  .canvas-box{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:100%}
+  .canvas-box strong{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  canvas{
+    max-width:100%;height:auto;background:#0b0d12;
+    border:1px solid var(--border);border-radius:10px;
+  }
+  .thumbs{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+  .thumbs img{height:64px;border-radius:8px;border:1px solid var(--border)}
+  .hint{color:var(--muted);font-size:.82rem;margin-top:10px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .badge{display:inline-block;background:var(--panel-2);border:1px solid var(--border);
+    color:var(--muted);border-radius:6px;padding:2px 8px;font-size:.75rem;margin-left:6px}
+  footer{text-align:center;color:var(--muted);font-size:.82rem;padding:26px 16px 40px}
+  footer a{color:var(--accent);text-decoration:none}
+  .combine-block{border-top:1px dashed var(--border);margin-top:14px;padding-top:14px}
+  .switch{display:flex;align-items:center;gap:8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎨 Image Filters</h1>
+  <p>Transcripción a la web de los algoritmos de manipulación de imágenes de los cuadernos.
+     Todo corre localmente en tu navegador — tus imágenes nunca se suben a ningún servidor.</p>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-view="boxes">🧩 Boxes</button>
+  <button class="tab" data-view="fill">🪣 Horizontal / Vertical Fill</button>
+  <button class="tab" data-view="chroma">🌈 Chroma Shift</button>
+</div>
+
+<main>
+  <!-- ================= BOXES ================= -->
+  <section class="view active" id="view-boxes">
+    <div class="card">
+      <h2>Boxes <span class="badge">2–5 imágenes</span></h2>
+      <p class="desc">Divide cada imagen en una rejilla <em>N×N</em> y combina las celdas
+        intercalándolas cíclicamente entre las imágenes, tomando una sección de píxeles de cada una.</p>
+
+      <div class="filebar">
+        <input type="file" id="boxesFiles" accept="image/*" multiple>
+        <span class="hint">Selecciona entre 2 y 5 imágenes.</span>
+      </div>
+      <div class="thumbs" id="boxesThumbs"></div>
+
+      <div class="controls">
+        <div class="control">
+          <label>Divisiones de la rejilla (N) · <span class="val" id="boxesSideVal">11</span></label>
+          <input type="range" id="boxesSide" min="2" max="40" value="11">
+        </div>
+        <div class="control">
+          <label>Orden</label>
+          <select id="boxesOrder">
+            <option value="normal">Normal (1,2,3…)</option>
+            <option value="reverse">Invertido (…,3,2,1)</option>
+          </select>
+        </div>
+        <div class="control">
+          <label>Ajuste de tamaño</label>
+          <select id="boxesFit">
+            <option value="first">Al tamaño de la 1ª imagen</option>
+            <option value="min">Al tamaño mínimo común</option>
+          </select>
+        </div>
+        <div class="control">
+          <button id="boxesRun">Combinar</button>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <div class="canvas-box">
+          <strong>Resultado</strong>
+          <canvas id="boxesOut"></canvas>
+          <button class="dl" id="boxesDl" disabled>⬇ Descargar</button>
+        </div>
+      </div>
+      <p class="hint">Con N grande cada celda es más pequeña y el mosaico es más fino. Las imágenes se
+        redimensionan a un tamaño común antes de combinarse.</p>
+    </div>
+  </section>
+
+  <!-- ================= FILL ================= -->
+  <section class="view" id="view-fill">
+    <div class="card">
+      <h2>Horizontal / Vertical Fill</h2>
+      <p class="desc">A partir de un porcentaje de inicio y una dirección, replica la fila o columna del
+        borde para rellenar el resto de la imagen. Incluye el <strong>nuevo modo combinado</strong>
+        (horizontal + vertical a la vez).</p>
+
+      <div class="filebar">
+        <input type="file" id="fillFile" accept="image/*">
+        <button class="ghost" id="fillReset" disabled>Reset</button>
+      </div>
+
+      <div class="controls">
+        <div class="control">
+          <label>Dirección horizontal/vertical</label>
+          <select id="fillDir">
+            <option value="left">Left (rellena izquierda)</option>
+            <option value="right">Right (rellena derecha)</option>
+            <option value="up">Up (rellena arriba)</option>
+            <option value="down">Down (rellena abajo)</option>
+          </select>
+        </div>
+        <div class="control">
+          <label>Inicio del relleno · <span class="val" id="fillPctVal">30%</span></label>
+          <input type="range" id="fillPct" min="0" max="100" value="30">
+        </div>
+      </div>
+
+      <div class="combine-block">
+        <div class="switch">
+          <input type="checkbox" id="fillCombine">
+          <label for="fillCombine" style="text-transform:none;color:var(--text)">
+            <strong>Modo combinado</strong> — aplicar relleno horizontal y vertical simultáneamente
+          </label>
+        </div>
+        <div class="controls" id="fillCombineControls" style="display:none;margin-top:14px">
+          <div class="control">
+            <label>Dirección horizontal</label>
+            <select id="fillHDir">
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+          <div class="control">
+            <label>Inicio horizontal · <span class="val" id="fillHPctVal">30%</span></label>
+            <input type="range" id="fillHPct" min="0" max="100" value="30">
+          </div>
+          <div class="control">
+            <label>Dirección vertical</label>
+            <select id="fillVDir">
+              <option value="up">Up</option>
+              <option value="down">Down</option>
+            </select>
+          </div>
+          <div class="control">
+            <label>Inicio vertical · <span class="val" id="fillVPctVal">30%</span></label>
+            <input type="range" id="fillVPct" min="0" max="100" value="30">
+          </div>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <div class="canvas-box">
+          <strong>Original</strong>
+          <canvas id="fillIn"></canvas>
+        </div>
+        <div class="canvas-box">
+          <strong>Transformada</strong>
+          <canvas id="fillOut"></canvas>
+          <button class="dl" id="fillDl" disabled>⬇ Descargar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CHROMA ================= -->
+  <section class="view" id="view-chroma">
+    <div class="card">
+      <h2>Chroma Shift</h2>
+      <p class="desc">Separa los canales de color y desplaza <strong>2 canales</strong> en una dirección
+        (efecto tipo aberración cromática / glitch RGB). Por defecto: rojo y azul en sentidos opuestos.</p>
+
+      <div class="filebar">
+        <input type="file" id="chromaFile" accept="image/*">
+      </div>
+
+      <div class="controls">
+        <div class="control">
+          <label>Canal A</label>
+          <select id="chromaA">
+            <option value="0">Rojo</option>
+            <option value="1">Verde</option>
+            <option value="2" selected>Azul</option>
+          </select>
+        </div>
+        <div class="control">
+          <label>Canal B</label>
+          <select id="chromaB">
+            <option value="0" selected>Rojo</option>
+            <option value="1">Verde</option>
+            <option value="2">Azul</option>
+          </select>
+        </div>
+        <div class="control">
+          <label>Eje</label>
+          <select id="chromaAxis">
+            <option value="x">Horizontal</option>
+            <option value="y">Vertical</option>
+          </select>
+        </div>
+        <div class="control">
+          <label>Desplazamiento · <span class="val" id="chromaAmtVal">4%</span></label>
+          <input type="range" id="chromaAmt" min="0" max="30" step="0.5" value="4">
+        </div>
+        <div class="control">
+          <label>Sentido</label>
+          <select id="chromaMode">
+            <option value="opposite">Opuestos (A −, B +)</option>
+            <option value="same">Mismo sentido</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <div class="canvas-box">
+          <strong>Original</strong>
+          <canvas id="chromaIn"></canvas>
+        </div>
+        <div class="canvas-box">
+          <strong>Transformada</strong>
+          <canvas id="chromaOut"></canvas>
+          <button class="dl" id="chromaDl" disabled>⬇ Descargar</button>
+        </div>
+      </div>
+      <p class="hint">Si eliges el mismo canal en A y B, solo se desplaza ese canal.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Hecho a partir de los cuadernos de <strong>image-filters</strong> ·
+  <a href="https://github.com/elivasquezhdz/image-filters">Ver repositorio en GitHub</a>
+</footer>
+
+<script>
+/* ------------------------------------------------------------------ */
+/*  Tabs                                                              */
+/* ------------------------------------------------------------------ */
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('view-'+tab.dataset.view).classList.add('active');
+  });
+});
+
+/* helpers ----------------------------------------------------------- */
+function loadImage(file){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>res(img);
+    img.onerror=rej;
+    img.src=URL.createObjectURL(file);
+  });
+}
+function imageToCanvas(img,w,h){
+  const c=document.createElement('canvas');
+  c.width=w||img.width; c.height=h||img.height;
+  c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+  return c;
+}
+function download(canvas,name){
+  const a=document.createElement('a');
+  a.download=name;
+  a.href=canvas.toDataURL('image/png');
+  a.click();
+}
+
+/* ================================================================== */
+/*  BOXES                                                             */
+/* ================================================================== */
+(function(){
+  const filesInput=document.getElementById('boxesFiles');
+  const thumbs=document.getElementById('boxesThumbs');
+  const sideSlider=document.getElementById('boxesSide');
+  const sideVal=document.getElementById('boxesSideVal');
+  const orderSel=document.getElementById('boxesOrder');
+  const fitSel=document.getElementById('boxesFit');
+  const runBtn=document.getElementById('boxesRun');
+  const outCanvas=document.getElementById('boxesOut');
+  const dlBtn=document.getElementById('boxesDl');
+  let images=[]; // {img, canvas}
+
+  sideSlider.addEventListener('input',()=>{sideVal.textContent=sideSlider.value;});
+
+  filesInput.addEventListener('change',async e=>{
+    let files=[...e.target.files];
+    if(files.length>5){ alert('Máximo 5 imágenes; se usarán las primeras 5.'); files=files.slice(0,5); }
+    images=[];
+    thumbs.innerHTML='';
+    for(const f of files){
+      const img=await loadImage(f);
+      images.push(img);
+      const t=document.createElement('img'); t.src=img.src; thumbs.appendChild(t);
+    }
+  });
+
+  runBtn.addEventListener('click',()=>{
+    if(images.length<2){ alert('Selecciona al menos 2 imágenes.'); return; }
+    const N=parseInt(sideSlider.value,10);
+    // common size
+    let W,H;
+    if(fitSel.value==='min'){
+      W=Math.min(...images.map(i=>i.width));
+      H=Math.min(...images.map(i=>i.height));
+    }else{
+      W=images[0].width; H=images[0].height;
+    }
+    let order=[...images];
+    if(orderSel.value==='reverse') order=order.reverse();
+    const srcCanvases=order.map(img=>imageToCanvas(img,W,H));
+    const numImgs=srcCanvases.length;
+
+    outCanvas.width=W; outCanvas.height=H;
+    const ctx=outCanvas.getContext('2d');
+
+    const gridH=Math.floor(H/N), gridW=Math.floor(W/N);
+    let boxSelect=0;
+    for(let i=0;i<N;i++){
+      for(let j=0;j<N;j++){
+        const top=i*gridH, left=j*gridW;
+        const bottom=(i<N-1)? (i+1)*gridH : H;
+        const right =(j<N-1)? (j+1)*gridW : W;
+        const cw=right-left, ch=bottom-top;
+        const src=srcCanvases[boxSelect%numImgs];
+        ctx.drawImage(src, left,top,cw,ch, left,top,cw,ch);
+        boxSelect++;
+      }
+    }
+    dlBtn.disabled=false;
+  });
+
+  dlBtn.addEventListener('click',()=>download(outCanvas,'boxes.png'));
+})();
+
+/* ================================================================== */
+/*  FILL                                                             */
+/* ================================================================== */
+(function(){
+  const fileInput=document.getElementById('fillFile');
+  const inCanvas=document.getElementById('fillIn');
+  const outCanvas=document.getElementById('fillOut');
+  const dir=document.getElementById('fillDir');
+  const pct=document.getElementById('fillPct');
+  const pctVal=document.getElementById('fillPctVal');
+  const combine=document.getElementById('fillCombine');
+  const combineCtl=document.getElementById('fillCombineControls');
+  const hDir=document.getElementById('fillHDir'), hPct=document.getElementById('fillHPct'), hPctVal=document.getElementById('fillHPctVal');
+  const vDir=document.getElementById('fillVDir'), vPct=document.getElementById('fillVPct'), vPctVal=document.getElementById('fillVPctVal');
+  const dlBtn=document.getElementById('fillDl');
+  const resetBtn=document.getElementById('fillReset');
+  let baseData=null, W=0, H=0;
+
+  // core: fill one direction on an ImageData (mutates copy, returns new)
+  function fillDirection(srcData,w,h,direction,percent){
+    const out=new ImageData(new Uint8ClampedArray(srcData.data),w,h);
+    const d=out.data;
+    percent=Math.max(0,Math.min(1,percent));
+    const idx=(x,y)=>(y*w+x)*4;
+    function copyCol(from,to){
+      for(let y=0;y<h;y++){ const s=idx(from,y),t=idx(to,y);
+        d[t]=d[s];d[t+1]=d[s+1];d[t+2]=d[s+2];d[t+3]=d[s+3]; }
+    }
+    function copyRow(from,to){
+      for(let x=0;x<w;x++){ const s=idx(x,from),t=idx(x,to);
+        d[t]=d[s];d[t+1]=d[s+1];d[t+2]=d[s+2];d[t+3]=d[s+3]; }
+    }
+    if(direction==='left'){
+      const fw=Math.floor(w*percent), src=Math.min(fw,w-1);
+      for(let x=0;x<fw;x++) copyCol(src,x);
+    }else if(direction==='right'){
+      const fw=Math.floor(w*percent), src=Math.max(w-fw-1,0);
+      for(let x=w-fw;x<w;x++) copyCol(src,x);
+    }else if(direction==='up'){
+      const fh=Math.floor(h*percent), src=Math.min(fh,h-1);
+      for(let y=0;y<fh;y++) copyRow(src,y);
+    }else if(direction==='down'){
+      const fh=Math.floor(h*percent), src=Math.max(h-fh-1,0);
+      for(let y=h-fh;y<h;y++) copyRow(src,y);
+    }
+    return out;
+  }
+
+  function render(){
+    if(!baseData) return;
+    let result;
+    if(combine.checked){
+      // horizontal first, then vertical on the result
+      result=fillDirection(baseData,W,H,hDir.value,parseFloat(hPct.value)/100);
+      result=fillDirection(result,W,H,vDir.value,parseFloat(vPct.value)/100);
+    }else{
+      result=fillDirection(baseData,W,H,dir.value,parseFloat(pct.value)/100);
+    }
+    outCanvas.getContext('2d').putImageData(result,0,0);
+    dlBtn.disabled=false;
+  }
+
+  fileInput.addEventListener('change',async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const img=await loadImage(f);
+    W=img.width; H=img.height;
+    [inCanvas,outCanvas].forEach(c=>{c.width=W;c.height=H;});
+    const ic=inCanvas.getContext('2d');
+    ic.drawImage(img,0,0);
+    baseData=ic.getImageData(0,0,W,H);
+    resetBtn.disabled=false;
+    render();
+  });
+
+  pct.addEventListener('input',()=>{pctVal.textContent=pct.value+'%';render();});
+  dir.addEventListener('change',render);
+  hPct.addEventListener('input',()=>{hPctVal.textContent=hPct.value+'%';render();});
+  vPct.addEventListener('input',()=>{vPctVal.textContent=vPct.value+'%';render();});
+  hDir.addEventListener('change',render); vDir.addEventListener('change',render);
+  combine.addEventListener('change',()=>{
+    combineCtl.style.display=combine.checked?'flex':'none';
+    render();
+  });
+  resetBtn.addEventListener('click',()=>{
+    if(!baseData) return;
+    outCanvas.getContext('2d').putImageData(baseData,0,0);
+  });
+  dlBtn.addEventListener('click',()=>download(outCanvas,'fill.png'));
+})();
+
+/* ================================================================== */
+/*  CHROMA SHIFT                                                     */
+/* ================================================================== */
+(function(){
+  const fileInput=document.getElementById('chromaFile');
+  const inCanvas=document.getElementById('chromaIn');
+  const outCanvas=document.getElementById('chromaOut');
+  const chA=document.getElementById('chromaA');
+  const chB=document.getElementById('chromaB');
+  const axis=document.getElementById('chromaAxis');
+  const amt=document.getElementById('chromaAmt');
+  const amtVal=document.getElementById('chromaAmtVal');
+  const mode=document.getElementById('chromaMode');
+  const dlBtn=document.getElementById('chromaDl');
+  let baseData=null, W=0, H=0;
+
+  // shift one channel of `out` sampling from `src` by (dx,dy)
+  function shiftChannel(src,out,w,h,ch,dx,dy){
+    const s=src.data, o=out.data;
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const sx=x-dx, sy=y-dy;
+        const t=(y*w+x)*4+ch;
+        if(sx>=0&&sx<w&&sy>=0&&sy<h){
+          o[t]=s[(sy*w+sx)*4+ch];
+        }else{
+          o[t]=0;
+        }
+      }
+    }
+  }
+
+  function render(){
+    if(!baseData) return;
+    const out=new ImageData(new Uint8ClampedArray(baseData.data),W,H);
+    const shiftPx=Math.round(W*parseFloat(amt.value)/100);
+    const chan=(v)=>({0:0,1:1,2:2}[v]); // 0=R,1=G,2=B  (matches RGBA offset)
+    const a=parseInt(chA.value,10), b=parseInt(chB.value,10);
+    const signB = (mode.value==='same')? -1 : 1;
+    let dax=0,day=0,dbx=0,dby=0;
+    if(axis.value==='x'){ dax=-shiftPx; dbx=signB*shiftPx; }
+    else{ day=-shiftPx; dby=signB*shiftPx; }
+    shiftChannel(baseData,out,W,H,a,dax,day);
+    shiftChannel(baseData,out,W,H,b,dbx,dby);
+    outCanvas.getContext('2d').putImageData(out,0,0);
+    dlBtn.disabled=false;
+  }
+
+  fileInput.addEventListener('change',async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const img=await loadImage(f);
+    W=img.width; H=img.height;
+    [inCanvas,outCanvas].forEach(c=>{c.width=W;c.height=H;});
+    const ic=inCanvas.getContext('2d');
+    ic.drawImage(img,0,0);
+    baseData=ic.getImageData(0,0,W,H);
+    render();
+  });
+
+  amt.addEventListener('input',()=>{amtVal.textContent=amt.value+'%';render();});
+  [chA,chB,axis,mode].forEach(el=>el.addEventListener('change',render));
+  dlBtn.addEventListener('click',()=>download(outCanvas,'chroma_shift.png'));
+})();
+</script>
+</body>
+</html>
