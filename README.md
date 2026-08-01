@@ -29,6 +29,9 @@ la imagen.
 Parámetros:
 - **Dirección:** `left`, `right`, `up`, `down`.
 - **Inicio del relleno:** porcentaje (0–100 %).
+- **Modo diagonal (nuevo):** rellena a lo largo de una recta diagonal definida por un
+  punto de inicio en **X (%)**, en **Y (%)** y una **pendiente**. Los píxeles de esa
+  recta se replican sobre el semiplano del lado de relleno, generando franjas diagonales.
 - **Modo combinado (nuevo):** aplica relleno horizontal **y** vertical al mismo
   tiempo, produciendo un relleno en forma de esquina. Esta combinación no existía
   en los cuadernos originales y se implementó tanto en la web como en un nuevo

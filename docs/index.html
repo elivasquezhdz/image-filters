@@ -220,21 +220,37 @@
 
       <div class="controls">
         <div class="control">
-          <label>Dirección horizontal/vertical</label>
+          <label>Dirección</label>
           <select id="fillDir">
             <option value="left">Left (rellena izquierda)</option>
             <option value="right">Right (rellena derecha)</option>
             <option value="up">Up (rellena arriba)</option>
             <option value="down">Down (rellena abajo)</option>
+            <option value="diagonal">Diagonal</option>
           </select>
         </div>
-        <div class="control">
+        <div class="control" id="fillPctControl">
           <label>Inicio del relleno · <span class="val" id="fillPctVal">30%</span></label>
           <input type="range" id="fillPct" min="0" max="100" value="30">
         </div>
       </div>
 
-      <div class="combine-block">
+      <div class="controls" id="fillDiagControls" style="display:none">
+        <div class="control">
+          <label>Inicio X · <span class="val" id="fillDxVal">50%</span></label>
+          <input type="range" id="fillDx" min="0" max="100" value="50">
+        </div>
+        <div class="control">
+          <label>Inicio Y · <span class="val" id="fillDyVal">50%</span></label>
+          <input type="range" id="fillDy" min="0" max="100" value="50">
+        </div>
+        <div class="control">
+          <label>Pendiente · <span class="val" id="fillSlopeVal">1.0</span></label>
+          <input type="range" id="fillSlope" min="-4" max="4" step="0.1" value="1">
+        </div>
+      </div>
+
+      <div class="combine-block" id="fillCombineBlock">
         <div class="switch">
           <input type="checkbox" id="fillCombine">
           <label for="fillCombine" style="text-transform:none;color:var(--text)">
@@ -466,6 +482,12 @@ function download(canvas,name){
   const combineCtl=document.getElementById('fillCombineControls');
   const hDir=document.getElementById('fillHDir'), hPct=document.getElementById('fillHPct'), hPctVal=document.getElementById('fillHPctVal');
   const vDir=document.getElementById('fillVDir'), vPct=document.getElementById('fillVPct'), vPctVal=document.getElementById('fillVPctVal');
+  const dx=document.getElementById('fillDx'), dxVal=document.getElementById('fillDxVal');
+  const dy=document.getElementById('fillDy'), dyVal=document.getElementById('fillDyVal');
+  const slope=document.getElementById('fillSlope'), slopeVal=document.getElementById('fillSlopeVal');
+  const diagControls=document.getElementById('fillDiagControls');
+  const pctControl=document.getElementById('fillPctControl');
+  const combineBlock=document.getElementById('fillCombineBlock');
   const dlBtn=document.getElementById('fillDl');
   const resetBtn=document.getElementById('fillReset');
   let baseData=null, W=0, H=0;
@@ -500,10 +522,44 @@ function download(canvas,name){
     return out;
   }
 
+  // diagonal fill: replicate the pixels of a diagonal boundary line across the
+  // half-plane on its "fill side". The boundary line passes through the anchor
+  // point (xPct,yPct) and has direction (1, slope); every pixel on the fill side
+  // takes the colour of the boundary pixel at the foot of its perpendicular.
+  function fillDiagonal(srcData,w,h,xPct,yPct,slope){
+    const out=new ImageData(new Uint8ClampedArray(srcData.data),w,h);
+    const s=srcData.data, d=out.data;
+    const ax=w*xPct, ay=h*yPct;
+    let ux=1, uy=slope;
+    const len=Math.hypot(ux,uy)||1; ux/=len; uy/=len; // unit smear direction
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const t=(x-ax)*ux+(y-ay)*uy; // signed distance along the smear direction
+        if(t>0){
+          let fx=Math.round(x-t*ux), fy=Math.round(y-t*uy); // foot on the boundary
+          if(fx<0)fx=0; else if(fx>w-1)fx=w-1;
+          if(fy<0)fy=0; else if(fy>h-1)fy=h-1;
+          const si=(fy*w+fx)*4, ti=(y*w+x)*4;
+          d[ti]=s[si]; d[ti+1]=s[si+1]; d[ti+2]=s[si+2]; d[ti+3]=s[si+3];
+        }
+      }
+    }
+    return out;
+  }
+
+  function updateFillUI(){
+    const diag = dir.value==='diagonal';
+    diagControls.style.display = diag ? 'flex' : 'none';
+    pctControl.style.display   = diag ? 'none' : 'flex';
+    combineBlock.style.display = diag ? 'none' : 'block';
+  }
+
   function render(){
     if(!baseData) return;
     let result;
-    if(combine.checked){
+    if(dir.value==='diagonal'){
+      result=fillDiagonal(baseData,W,H,parseFloat(dx.value)/100,parseFloat(dy.value)/100,parseFloat(slope.value));
+    }else if(combine.checked){
       // horizontal first, then vertical on the result
       result=fillDirection(baseData,W,H,hDir.value,parseFloat(hPct.value)/100);
       result=fillDirection(result,W,H,vDir.value,parseFloat(vPct.value)/100);
@@ -527,7 +583,10 @@ function download(canvas,name){
   });
 
   pct.addEventListener('input',()=>{pctVal.textContent=pct.value+'%';render();});
-  dir.addEventListener('change',render);
+  dir.addEventListener('change',()=>{updateFillUI();render();});
+  dx.addEventListener('input',()=>{dxVal.textContent=dx.value+'%';render();});
+  dy.addEventListener('input',()=>{dyVal.textContent=dy.value+'%';render();});
+  slope.addEventListener('input',()=>{slopeVal.textContent=parseFloat(slope.value).toFixed(1);render();});
   hPct.addEventListener('input',()=>{hPctVal.textContent=hPct.value+'%';render();});
   vPct.addEventListener('input',()=>{vPctVal.textContent=vPct.value+'%';render();});
   hDir.addEventListener('change',render); vDir.addEventListener('change',render);
