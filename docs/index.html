@@ -203,6 +203,63 @@
       <p class="hint">Con N grande cada celda es más pequeña y el mosaico es más fino. Las imágenes se
         redimensionan a un tamaño común antes de combinarse.</p>
     </div>
+
+    <div class="card">
+      <h2>Boxes por tamaño de bloque <span class="badge">2–5 imágenes</span></h2>
+      <p class="desc">Misma combinación intercalada, pero eligiendo el <strong>tamaño de los bloques</strong>
+        de forma independiente en horizontal y vertical, en <strong>píxeles o porcentaje</strong>.</p>
+
+      <div class="filebar">
+        <input type="file" id="boxes2Files" accept="image/*" multiple>
+        <span class="hint">Selecciona entre 2 y 5 imágenes.</span>
+      </div>
+      <div class="thumbs" id="boxes2Thumbs"></div>
+
+      <div class="controls">
+        <div class="control">
+          <label>Unidad</label>
+          <select id="boxes2Unit">
+            <option value="pct">Porcentaje (%)</option>
+            <option value="px">Píxeles (px)</option>
+          </select>
+        </div>
+        <div class="control">
+          <label>Ancho del bloque (horizontal)</label>
+          <input type="number" id="boxes2W" min="1" value="20">
+        </div>
+        <div class="control">
+          <label>Alto del bloque (vertical)</label>
+          <input type="number" id="boxes2H" min="1" value="20">
+        </div>
+        <div class="control">
+          <label>Orden</label>
+          <select id="boxes2Order">
+            <option value="normal">Normal (1,2,3…)</option>
+            <option value="reverse">Invertido (…,3,2,1)</option>
+          </select>
+        </div>
+        <div class="control">
+          <label>Ajuste de tamaño</label>
+          <select id="boxes2Fit">
+            <option value="first">Al tamaño de la 1ª imagen</option>
+            <option value="min">Al tamaño mínimo común</option>
+          </select>
+        </div>
+        <div class="control">
+          <button id="boxes2Run">Combinar</button>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <div class="canvas-box">
+          <strong>Resultado</strong>
+          <canvas id="boxes2Out"></canvas>
+          <button class="dl" id="boxes2Dl" disabled>⬇ Descargar</button>
+        </div>
+      </div>
+      <p class="hint" id="boxes2Hint">En modo porcentaje, el ancho es % del ancho de la imagen y el alto es %
+        del alto. El último bloque de cada fila/columna se recorta si no cabe completo.</p>
+    </div>
   </section>
 
   <!-- ================= FILL ================= -->
@@ -466,6 +523,96 @@ function download(canvas,name){
   });
 
   dlBtn.addEventListener('click',()=>download(outCanvas,'boxes.png'));
+})();
+
+/* ================================================================== */
+/*  BOXES — por tamaño de bloque (px o %)                            */
+/* ================================================================== */
+(function(){
+  const filesInput=document.getElementById('boxes2Files');
+  const thumbs=document.getElementById('boxes2Thumbs');
+  const unitSel=document.getElementById('boxes2Unit');
+  const wInput=document.getElementById('boxes2W');
+  const hInput=document.getElementById('boxes2H');
+  const orderSel=document.getElementById('boxes2Order');
+  const fitSel=document.getElementById('boxes2Fit');
+  const runBtn=document.getElementById('boxes2Run');
+  const outCanvas=document.getElementById('boxes2Out');
+  const dlBtn=document.getElementById('boxes2Dl');
+  const hint=document.getElementById('boxes2Hint');
+  let images=[];
+
+  function syncUnitUI(){
+    if(unitSel.value==='pct'){
+      wInput.max=100; hInput.max=100;
+      if(parseFloat(wInput.value)>100) wInput.value=100;
+      if(parseFloat(hInput.value)>100) hInput.value=100;
+      hint.textContent='En modo porcentaje, el ancho es % del ancho de la imagen y el alto es % del alto. '+
+        'El último bloque de cada fila/columna se recorta si no cabe completo.';
+    }else{
+      wInput.removeAttribute('max'); hInput.removeAttribute('max');
+      hint.textContent='En modo píxeles, el ancho y el alto del bloque se dan en px. '+
+        'El último bloque de cada fila/columna se recorta si no cabe completo.';
+    }
+  }
+  unitSel.addEventListener('change',syncUnitUI);
+  syncUnitUI();
+
+  filesInput.addEventListener('change',async e=>{
+    let files=[...e.target.files];
+    if(files.length>5){ alert('Máximo 5 imágenes; se usarán las primeras 5.'); files=files.slice(0,5); }
+    images=[]; thumbs.innerHTML='';
+    for(const f of files){
+      const img=await loadImage(f);
+      images.push(img);
+      const t=document.createElement('img'); t.src=img.src; thumbs.appendChild(t);
+    }
+  });
+
+  runBtn.addEventListener('click',()=>{
+    if(images.length<2){ alert('Selecciona al menos 2 imágenes.'); return; }
+    let W,H;
+    if(fitSel.value==='min'){
+      W=Math.min(...images.map(i=>i.width));
+      H=Math.min(...images.map(i=>i.height));
+    }else{
+      W=images[0].width; H=images[0].height;
+    }
+    // resolve block size to pixels
+    let blockW, blockH;
+    if(unitSel.value==='pct'){
+      blockW=Math.round(W*parseFloat(wInput.value)/100);
+      blockH=Math.round(H*parseFloat(hInput.value)/100);
+    }else{
+      blockW=Math.round(parseFloat(wInput.value));
+      blockH=Math.round(parseFloat(hInput.value));
+    }
+    blockW=Math.max(1,Math.min(W,blockW||1));
+    blockH=Math.max(1,Math.min(H,blockH||1));
+
+    let order=[...images];
+    if(orderSel.value==='reverse') order=order.reverse();
+    const srcCanvases=order.map(img=>imageToCanvas(img,W,H));
+    const numImgs=srcCanvases.length;
+
+    outCanvas.width=W; outCanvas.height=H;
+    const ctx=outCanvas.getContext('2d');
+
+    const cols=Math.ceil(W/blockW), rows=Math.ceil(H/blockH);
+    let boxSelect=0;
+    for(let i=0;i<rows;i++){
+      for(let j=0;j<cols;j++){
+        const left=j*blockW, top=i*blockH;
+        const cw=Math.min(blockW,W-left), ch=Math.min(blockH,H-top);
+        const src=srcCanvases[boxSelect%numImgs];
+        ctx.drawImage(src, left,top,cw,ch, left,top,cw,ch);
+        boxSelect++;
+      }
+    }
+    dlBtn.disabled=false;
+  });
+
+  dlBtn.addEventListener('click',()=>download(outCanvas,'boxes_bloques.png'));
 })();
 
 /* ================================================================== */

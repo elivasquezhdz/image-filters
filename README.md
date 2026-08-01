@@ -16,8 +16,13 @@ Acepta **de 2 a 5 imágenes** y las combina en una sola. Divide cada imagen en
 una rejilla `N×N` y toma una sección de píxeles de cada imagen, intercalando las
 celdas cíclicamente entre todas las imágenes.
 
-Parámetros:
-- **Divisiones de la rejilla (N):** cuántas filas/columnas de celdas (2–40).
+Hay dos secciones:
+- **Por divisiones (N×N):** la rejilla se define por el número de divisiones.
+  - **Divisiones de la rejilla (N):** cuántas filas/columnas de celdas (2–40).
+- **Por tamaño de bloque:** se elige el tamaño de los bloques de forma independiente en
+  horizontal y vertical, en **píxeles o porcentaje**.
+
+Parámetros comunes:
 - **Orden:** normal o invertido.
 - **Ajuste de tamaño:** al tamaño de la primera imagen o al mínimo común.
 
