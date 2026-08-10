@@ -26,7 +26,29 @@ Parámetros comunes:
 - **Orden:** normal o invertido.
 - **Ajuste de tamaño:** al tamaño de la primera imagen o al mínimo común.
 
-### 2. 🪣 Horizontal / Vertical Fill
+### 2. 🎞️ Boxes Animación
+Anima el filtro **Boxes** recorriendo el número de divisiones `N` de la rejilla
+desde un mínimo hasta un máximo. Cada valor de `N` genera un cuadro y, al
+reproducirlos en secuencia, el mosaico se afina (o se engruesa) progresivamente
+mientras intercala las imágenes. Lleva al navegador la idea de los cuadernos
+`boxes-frames` / `boxes-frames-multiple`.
+
+Parámetros:
+- **N mínimo / N máximo / Paso:** el rango de divisiones que se recorre.
+- **Velocidad (FPS):** cuadros por segundo de la reproducción.
+- **Orden** y **Ajuste de tamaño:** igual que en Boxes.
+- **Bucle «ida y vuelta» (ping-pong):** reproduce la secuencia hacia delante y
+  luego hacia atrás para un ciclo continuo.
+
+Exportación:
+- **WebM:** graba un ciclo completo de la animación con `MediaRecorder`.
+- **Cuadro (PNG):** guarda el fotograma visible (útil en navegadores sin
+  soporte de grabación de canvas, p. ej. algunos iOS).
+
+Para no agotar la memoria del navegador, el número de cuadros y el tamaño de la
+animación se limitan automáticamente.
+
+### 3. 🪣 Horizontal / Vertical Fill
 Selecciona una imagen y, a partir de un **porcentaje de inicio** y una
 **dirección**, replica la fila o columna de ese borde para rellenar el resto de
 la imagen.
@@ -42,7 +64,7 @@ Parámetros:
   en los cuadernos originales y se implementó tanto en la web como en un nuevo
   script de Python (ver [`combined_fill.py`](combined_fill.py)).
 
-### 3. 🌈 Chroma Shift
+### 4. 🌈 Chroma Shift
 Toma una imagen y desplaza **2 canales de color** en una dirección, produciendo
 un efecto de aberración cromática / glitch RGB.
 

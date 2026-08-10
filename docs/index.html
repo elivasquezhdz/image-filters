@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Image Filters — Boxes · Fill · Chroma Shift</title>
+<title>Image Filters — Boxes · Animación · Fill · Chroma Shift</title>
 <style>
   :root{
     --bg:#0f1115;
@@ -151,6 +151,7 @@
 
 <div class="tabs">
   <button class="tab active" data-view="boxes">🧩 Boxes</button>
+  <button class="tab" data-view="anim">🎞️ Boxes Animación</button>
   <button class="tab" data-view="fill">🪣 Horizontal / Vertical Fill</button>
   <button class="tab" data-view="chroma">🌈 Chroma Shift</button>
 </div>
@@ -259,6 +260,83 @@
       </div>
       <p class="hint" id="boxes2Hint">En modo porcentaje, el ancho es % del ancho de la imagen y el alto es %
         del alto. El último bloque de cada fila/columna se recorta si no cabe completo.</p>
+    </div>
+  </section>
+
+  <!-- ================= BOXES ANIMACIÓN ================= -->
+  <section class="view" id="view-anim">
+    <div class="card">
+      <h2>Boxes Animación <span class="badge">2–5 imágenes</span></h2>
+      <p class="desc">Genera una <strong>animación</strong> del filtro Boxes recorriendo el número de
+        divisiones <em>N</em> de la rejilla desde un mínimo hasta un máximo. Cada valor de N produce un
+        cuadro; al reproducirlos en secuencia el mosaico se afina (o se engruesa) progresivamente
+        mientras intercala las imágenes. Basado en los cuadernos <code>boxes-frames</code>.</p>
+
+      <div class="filebar">
+        <input type="file" id="animFiles" accept="image/*" multiple>
+        <span class="hint">Selecciona entre 2 y 5 imágenes.</span>
+      </div>
+      <div class="thumbs" id="animThumbs"></div>
+
+      <div class="controls">
+        <div class="control">
+          <label>N mínimo</label>
+          <input type="number" id="animMin" min="2" max="80" value="2">
+        </div>
+        <div class="control">
+          <label>N máximo</label>
+          <input type="number" id="animMax" min="2" max="80" value="30">
+        </div>
+        <div class="control">
+          <label>Paso</label>
+          <input type="number" id="animStep" min="1" max="20" value="2">
+        </div>
+        <div class="control">
+          <label>Velocidad (FPS) · <span class="val" id="animFpsVal">10</span></label>
+          <input type="range" id="animFps" min="1" max="30" value="10">
+        </div>
+        <div class="control">
+          <label>Orden</label>
+          <select id="animOrder">
+            <option value="normal">Normal (1,2,3…)</option>
+            <option value="reverse">Invertido (…,3,2,1)</option>
+          </select>
+        </div>
+        <div class="control">
+          <label>Ajuste de tamaño</label>
+          <select id="animFit">
+            <option value="first">Al tamaño de la 1ª imagen</option>
+            <option value="min">Al tamaño mínimo común</option>
+          </select>
+        </div>
+        <div class="control">
+          <label>Bucle</label>
+          <div class="switch" style="height:38px">
+            <input type="checkbox" id="animPing" checked>
+            <label for="animPing" style="text-transform:none;color:var(--text)">Ida y vuelta</label>
+          </div>
+        </div>
+        <div class="control">
+          <button id="animRun">Generar animación</button>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <div class="canvas-box">
+          <strong>Animación</strong>
+          <canvas id="animOut"></canvas>
+          <div class="row" style="justify-content:center">
+            <button class="ghost" id="animPlay" disabled>▶ Reproducir</button>
+            <button class="dl" id="animWebm" disabled>⬇ Descargar (WebM)</button>
+            <button class="ghost" id="animFrameDl" disabled>⬇ Cuadro (PNG)</button>
+          </div>
+          <span class="hint" id="animStatus">Sube imágenes y pulsa «Generar animación».</span>
+        </div>
+      </div>
+      <p class="hint">Con N grande cada celda es más pequeña y el mosaico es más fino. Para animaciones
+        muy largas los cuadros se limitan y el tamaño se reduce para no agotar la memoria del navegador.
+        La exportación WebM usa <code>MediaRecorder</code>; si tu navegador no la admite (p. ej. algunos
+        iOS), usa «Cuadro (PNG)» para guardar el fotograma visible.</p>
     </div>
   </section>
 
@@ -671,6 +749,216 @@ function openImageInTab(blob){
   });
 
   dlBtn.addEventListener('click',()=>download(outCanvas,'boxes_bloques.png'));
+})();
+
+/* ================================================================== */
+/*  BOXES — ANIMACIÓN (barrido del número de divisiones N)           */
+/* ================================================================== */
+(function(){
+  const filesInput=document.getElementById('animFiles');
+  const thumbs=document.getElementById('animThumbs');
+  const minInput=document.getElementById('animMin');
+  const maxInput=document.getElementById('animMax');
+  const stepInput=document.getElementById('animStep');
+  const fpsSlider=document.getElementById('animFps');
+  const fpsVal=document.getElementById('animFpsVal');
+  const orderSel=document.getElementById('animOrder');
+  const fitSel=document.getElementById('animFit');
+  const pingChk=document.getElementById('animPing');
+  const runBtn=document.getElementById('animRun');
+  const outCanvas=document.getElementById('animOut');
+  const playBtn=document.getElementById('animPlay');
+  const webmBtn=document.getElementById('animWebm');
+  const frameDlBtn=document.getElementById('animFrameDl');
+  const status=document.getElementById('animStatus');
+
+  const MAX_FRAMES=80;   // cap on generated frames (protects memory)
+  const MAX_DIM=1000;    // cap on the longer side of the animation frames
+  let images=[];         // loaded <img>
+  let frames=[];         // one offscreen canvas per N
+  let Nlist=[];          // the N value behind each frame
+  let seq=[];            // playback order (indices into frames)
+  let seqPos=0;
+  let W=0,H=0;
+  let playing=false, timer=null, recording=false;
+
+  fpsSlider.addEventListener('input',()=>{
+    fpsVal.textContent=fpsSlider.value;
+    if(playing) startTimer(); // re-arm at the new rate
+  });
+
+  filesInput.addEventListener('change',async e=>{
+    let files=[...e.target.files];
+    if(files.length>5){ alert('Máximo 5 imágenes; se usarán las primeras 5.'); files=files.slice(0,5); }
+    images=[]; thumbs.innerHTML='';
+    for(const f of files){
+      const img=await loadImage(f);
+      images.push(img);
+      const t=document.createElement('img'); t.src=img.src; thumbs.appendChild(t);
+    }
+  });
+
+  // Build one Boxes frame — same interleaved N×N grid as the Boxes tab.
+  function renderBoxesFrame(srcCanvases,w,h,N){
+    N=Math.max(2,Math.min(N,w,h));
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    const ctx=c.getContext('2d');
+    const gridH=Math.floor(h/N), gridW=Math.floor(w/N);
+    const numImgs=srcCanvases.length;
+    let boxSelect=0;
+    for(let i=0;i<N;i++){
+      for(let j=0;j<N;j++){
+        const top=i*gridH, left=j*gridW;
+        const bottom=(i<N-1)?(i+1)*gridH:h;
+        const right =(j<N-1)?(j+1)*gridW:w;
+        const cw=right-left, ch=bottom-top;
+        ctx.drawImage(srcCanvases[boxSelect%numImgs], left,top,cw,ch, left,top,cw,ch);
+        boxSelect++;
+      }
+    }
+    return c;
+  }
+
+  // Playback order: forward, plus the reverse middle when ping-pong is on.
+  function buildSeq(){
+    seq=frames.map((_,i)=>i);
+    if(pingChk.checked && frames.length>2){
+      for(let i=frames.length-2;i>=1;i--) seq.push(i);
+    }
+  }
+
+  function drawAt(pos){
+    if(!frames.length) return;
+    const fi=seq[((pos%seq.length)+seq.length)%seq.length];
+    outCanvas.getContext('2d').drawImage(frames[fi],0,0);
+    status.textContent=`Cuadro ${fi+1}/${frames.length} · N=${Nlist[fi]}`+(recording?' · grabando…':'');
+  }
+
+  function startTimer(){
+    if(timer){clearInterval(timer);timer=null;}
+    const fps=Math.max(1,parseInt(fpsSlider.value,10)||10);
+    timer=setInterval(()=>{
+      drawAt(seqPos);
+      seqPos=(seqPos+1)%seq.length;
+    },1000/fps);
+  }
+  function play(){
+    if(playing||!frames.length) return;
+    playing=true; playBtn.textContent='⏸ Pausa';
+    startTimer();
+  }
+  function pause(){
+    playing=false; playBtn.textContent='▶ Reproducir';
+    if(timer){clearInterval(timer);timer=null;}
+  }
+  playBtn.addEventListener('click',()=>{ playing?pause():play(); });
+
+  runBtn.addEventListener('click',()=>{
+    if(images.length<2){ alert('Selecciona al menos 2 imágenes.'); return; }
+    let minN=parseInt(minInput.value,10)||2;
+    let maxN=parseInt(maxInput.value,10)||minN;
+    let step=parseInt(stepInput.value,10)||1;
+    minN=Math.max(2,minN); step=Math.max(1,step);
+    if(maxN<minN) maxN=minN;
+
+    // Common working size, then cap the longer side and force even dimensions
+    // (some WebM encoders dislike odd sizes).
+    if(fitSel.value==='min'){
+      W=Math.min(...images.map(i=>i.width));
+      H=Math.min(...images.map(i=>i.height));
+    }else{
+      W=images[0].width; H=images[0].height;
+    }
+    const scale=Math.min(1, MAX_DIM/Math.max(W,H));
+    W=Math.max(2,Math.round(W*scale)); H=Math.max(2,Math.round(H*scale));
+    W-=W%2; H-=H%2; W=Math.max(2,W); H=Math.max(2,H);
+
+    // N can't exceed the pixel dimensions of a frame.
+    const capN=Math.max(2,Math.min(W,H));
+    if(minN>capN) minN=capN;
+    if(maxN>capN) maxN=capN;
+
+    Nlist=[];
+    let capped=false;
+    for(let n=minN;n<=maxN;n+=step){
+      if(Nlist.length>=MAX_FRAMES){ capped=true; break; }
+      Nlist.push(n);
+    }
+
+    let order=[...images];
+    if(orderSel.value==='reverse') order=order.reverse();
+    const srcCanvases=order.map(img=>imageToCanvas(img,W,H));
+
+    pause();
+    frames=Nlist.map(n=>renderBoxesFrame(srcCanvases,W,H,n));
+    buildSeq();
+    outCanvas.width=W; outCanvas.height=H;
+    seqPos=0; drawAt(0);
+
+    playBtn.disabled=false; frameDlBtn.disabled=false;
+    const canWebm=webmSupported();
+    webmBtn.disabled=!canWebm;
+    webmBtn.title=canWebm?'':'No disponible en este navegador';
+    status.textContent=`${frames.length} cuadros (N ${minN}–${Nlist[Nlist.length-1]}) · ${W}×${H}`
+      +(capped?` · limitado a ${MAX_FRAMES} cuadros`:'');
+    play();
+  });
+
+  /* ---- Exportación WebM mediante MediaRecorder sobre el canvas ---- */
+  function webmSupported(){
+    return typeof MediaRecorder!=='undefined'
+        && typeof outCanvas.captureStream==='function'
+        && (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+         || MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
+         || MediaRecorder.isTypeSupported('video/webm'));
+  }
+  function pickMime(){
+    const cands=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+    for(const m of cands) if(MediaRecorder.isTypeSupported(m)) return m;
+    return 'video/webm';
+  }
+  webmBtn.addEventListener('click',()=>{
+    if(!frames.length||recording) return;
+    if(!webmSupported()){ alert('Tu navegador no permite exportar WebM. Usa «Cuadro (PNG)».'); return; }
+    pause();
+    const fps=Math.max(1,parseInt(fpsSlider.value,10)||10);
+    const mime=pickMime();
+    let stream, rec;
+    try{
+      stream=outCanvas.captureStream(fps);
+      rec=new MediaRecorder(stream,{mimeType:mime});
+    }catch(err){ alert('No se pudo iniciar la grabación: '+err.message); return; }
+    const chunks=[];
+    rec.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop=()=>{
+      recording=false;
+      webmBtn.disabled=false; webmBtn.textContent='⬇ Descargar (WebM)';
+      const blob=new Blob(chunks,{type:mime});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download='boxes_anim.webm';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+      status.textContent=`WebM descargado · ${frames.length} cuadros.`;
+      play(); // resume live preview
+    };
+    recording=true;
+    webmBtn.disabled=true; webmBtn.textContent='Grabando…';
+    const frameMs=1000/fps;
+    rec.start();
+    // Drive exactly one full playback cycle in real time so the recorder
+    // captures every frame, then close it out.
+    let pos=0;
+    const iv=setInterval(()=>{
+      drawAt(pos);
+      pos++;
+      if(pos>=seq.length){
+        clearInterval(iv);
+        setTimeout(()=>{ try{rec.stop();}catch(_){} }, frameMs+40);
+      }
+    },frameMs);
+  });
+
+  frameDlBtn.addEventListener('click',()=>download(outCanvas,'boxes_anim_frame.png'));
 })();
 
 /* ================================================================== */
