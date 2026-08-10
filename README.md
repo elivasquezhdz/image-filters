@@ -41,7 +41,10 @@ Parámetros:
   luego hacia atrás para un ciclo continuo.
 
 Exportación:
-- **WebM:** graba un ciclo completo de la animación con `MediaRecorder`.
+- **Vídeo:** graba un ciclo completo de la animación con `MediaRecorder`,
+  prefiriendo **MP4** (H.264) por su compatibilidad al compartir (WhatsApp,
+  Fotos de iOS, redes). Si el navegador no puede grabar MP4 (p. ej. Firefox)
+  se descarga en WebM.
 - **Cuadro (PNG):** guarda el fotograma visible (útil en navegadores sin
   soporte de grabación de canvas, p. ej. algunos iOS).
 
