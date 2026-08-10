@@ -451,11 +451,69 @@ function imageToCanvas(img,w,h){
   c.getContext('2d').drawImage(img,0,0,c.width,c.height);
   return c;
 }
+/* Save the rendered canvas as a PNG.
+   Desktop & Android: a normal file download (unchanged behaviour).
+   iOS / iPadOS: WebKit ignores the <a download> attribute, so on an iPhone/iPad
+   the button used to do nothing at all. Instead we hand the PNG to the native
+   share sheet via the Web Share API — it offers "Save Image" (guarda la imagen
+   en Fotos / carrete) as well as "Save to Files", Messages, etc. Older iOS
+   without Web Share falls back to opening the image so it can be saved with a
+   long-press. */
 function download(canvas,name){
+  if(isIOS()){ shareImage(canvas,name); return; }
   const a=document.createElement('a');
   a.download=name;
   a.href=canvas.toDataURL('image/png');
+  document.body.appendChild(a);
   a.click();
+  a.remove();
+}
+
+function isIOS(){
+  const ua=navigator.userAgent||'';
+  // iPadOS 13+ masquerades as "MacIntel" but reports touch points.
+  return /iPad|iPhone|iPod/.test(ua)
+    || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+}
+
+// Synchronous canvas -> PNG Blob (keeps the user-gesture activation that
+// navigator.share() requires; an awaited canvas.toBlob() can lose it on iOS).
+function canvasToPngBlob(canvas){
+  const dataURL=canvas.toDataURL('image/png');
+  const bin=atob(dataURL.slice(dataURL.indexOf(',')+1));
+  const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  return new Blob([bytes],{type:'image/png'});
+}
+
+function shareImage(canvas,name){
+  let blob=null;
+  try{ blob=canvasToPngBlob(canvas); }catch(_){}
+  // Preferred: native share sheet with the file -> "Save Image" adds it to Photos.
+  if(blob && navigator.canShare){
+    let file=null;
+    try{ file=new File([blob],name,{type:'image/png'}); }catch(_){}
+    let canShare=false;
+    try{ canShare=!!file && navigator.canShare({files:[file]}); }catch(_){}
+    if(canShare){
+      navigator.share({files:[file]}).catch(err=>{
+        // Dismissing the sheet is a deliberate cancel, not a failure to recover from.
+        if(err && err.name==='AbortError') return;
+        openImageInTab(blob);
+      });
+      return;
+    }
+  }
+  // Fallback for older iOS without Web Share: open the PNG so the user can
+  // long-press it and choose "Add to Photos".
+  if(blob) openImageInTab(blob);
+  else window.open(canvas.toDataURL('image/png'),'_blank');
+}
+
+function openImageInTab(blob){
+  const url=URL.createObjectURL(blob);
+  window.open(url,'_blank');
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 
 /* ================================================================== */
