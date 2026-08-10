@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Image Filters — Boxes · Animación · Fill · Chroma Shift</title>
+<title>Image Filters — Boxes · Animation · Fill · Chroma Shift</title>
 <style>
   :root{
     --bg:#0f1115;
@@ -145,13 +145,13 @@
 <body>
 <header>
   <h1>🎨 Image Filters</h1>
-  <p>Transcripción a la web de los algoritmos de manipulación de imágenes de los cuadernos.
-     Todo corre localmente en tu navegador — tus imágenes nunca se suben a ningún servidor.</p>
+  <p>A web port of the image-manipulation algorithms from the notebooks.
+     Everything runs locally in your browser — your images are never uploaded to any server.</p>
 </header>
 
 <div class="tabs">
   <button class="tab active" data-view="boxes">🧩 Boxes</button>
-  <button class="tab" data-view="anim">🎞️ Boxes Animación</button>
+  <button class="tab" data-view="anim">🎞️ Boxes Animation</button>
   <button class="tab" data-view="fill">🪣 Horizontal / Vertical Fill</button>
   <button class="tab" data-view="chroma">🌈 Chroma Shift</button>
 </div>
@@ -160,184 +160,184 @@
   <!-- ================= BOXES ================= -->
   <section class="view active" id="view-boxes">
     <div class="card">
-      <h2>Boxes <span class="badge">2–5 imágenes</span></h2>
-      <p class="desc">Divide cada imagen en una rejilla <em>N×N</em> y combina las celdas
-        intercalándolas cíclicamente entre las imágenes, tomando una sección de píxeles de cada una.</p>
+      <h2>Boxes <span class="badge">2–5 images</span></h2>
+      <p class="desc">Splits each image into an <em>N×N</em> grid and combines the cells, interleaving
+        them cyclically across the images by taking a section of pixels from each one.</p>
 
       <div class="filebar">
         <input type="file" id="boxesFiles" accept="image/*" multiple>
-        <span class="hint">Selecciona entre 2 y 5 imágenes.</span>
+        <span class="hint">Select between 2 and 5 images.</span>
       </div>
       <div class="thumbs" id="boxesThumbs"></div>
 
       <div class="controls">
         <div class="control">
-          <label>Divisiones de la rejilla (N) · <span class="val" id="boxesSideVal">11</span></label>
+          <label>Grid divisions (N) · <span class="val" id="boxesSideVal">11</span></label>
           <input type="range" id="boxesSide" min="2" max="40" value="11">
         </div>
         <div class="control">
-          <label>Orden</label>
+          <label>Order</label>
           <select id="boxesOrder">
             <option value="normal">Normal (1,2,3…)</option>
-            <option value="reverse">Invertido (…,3,2,1)</option>
+            <option value="reverse">Reversed (…,3,2,1)</option>
           </select>
         </div>
         <div class="control">
-          <label>Ajuste de tamaño</label>
+          <label>Size fit</label>
           <select id="boxesFit">
-            <option value="first">Al tamaño de la 1ª imagen</option>
-            <option value="min">Al tamaño mínimo común</option>
+            <option value="first">To the 1st image's size</option>
+            <option value="min">To the smallest common size</option>
           </select>
         </div>
         <div class="control">
-          <button id="boxesRun">Combinar</button>
+          <button id="boxesRun">Combine</button>
         </div>
       </div>
 
       <div class="canvas-wrap">
         <div class="canvas-box">
-          <strong>Resultado</strong>
+          <strong>Result</strong>
           <canvas id="boxesOut"></canvas>
-          <button class="dl" id="boxesDl" disabled>⬇ Descargar</button>
+          <button class="dl" id="boxesDl" disabled>⬇ Download</button>
         </div>
       </div>
-      <p class="hint">Con N grande cada celda es más pequeña y el mosaico es más fino. Las imágenes se
-        redimensionan a un tamaño común antes de combinarse.</p>
+      <p class="hint">With a larger N each cell is smaller and the mosaic is finer. Images are
+        resized to a common size before combining.</p>
     </div>
 
     <div class="card">
-      <h2>Boxes por tamaño de bloque <span class="badge">2–5 imágenes</span></h2>
-      <p class="desc">Misma combinación intercalada, pero eligiendo el <strong>tamaño de los bloques</strong>
-        de forma independiente en horizontal y vertical, en <strong>píxeles o porcentaje</strong>.</p>
+      <h2>Boxes by block size <span class="badge">2–5 images</span></h2>
+      <p class="desc">Same interleaved combination, but choosing the <strong>block size</strong>
+        independently for horizontal and vertical, in <strong>pixels or percentage</strong>.</p>
 
       <div class="filebar">
         <input type="file" id="boxes2Files" accept="image/*" multiple>
-        <span class="hint">Selecciona entre 2 y 5 imágenes.</span>
+        <span class="hint">Select between 2 and 5 images.</span>
       </div>
       <div class="thumbs" id="boxes2Thumbs"></div>
 
       <div class="controls">
         <div class="control">
-          <label>Unidad</label>
+          <label>Unit</label>
           <select id="boxes2Unit">
-            <option value="pct">Porcentaje (%)</option>
-            <option value="px">Píxeles (px)</option>
+            <option value="pct">Percentage (%)</option>
+            <option value="px">Pixels (px)</option>
           </select>
         </div>
         <div class="control">
-          <label>Ancho del bloque (horizontal)</label>
+          <label>Block width (horizontal)</label>
           <input type="number" id="boxes2W" min="1" value="20">
         </div>
         <div class="control">
-          <label>Alto del bloque (vertical)</label>
+          <label>Block height (vertical)</label>
           <input type="number" id="boxes2H" min="1" value="20">
         </div>
         <div class="control">
-          <label>Orden</label>
+          <label>Order</label>
           <select id="boxes2Order">
             <option value="normal">Normal (1,2,3…)</option>
-            <option value="reverse">Invertido (…,3,2,1)</option>
+            <option value="reverse">Reversed (…,3,2,1)</option>
           </select>
         </div>
         <div class="control">
-          <label>Ajuste de tamaño</label>
+          <label>Size fit</label>
           <select id="boxes2Fit">
-            <option value="first">Al tamaño de la 1ª imagen</option>
-            <option value="min">Al tamaño mínimo común</option>
+            <option value="first">To the 1st image's size</option>
+            <option value="min">To the smallest common size</option>
           </select>
         </div>
         <div class="control">
-          <button id="boxes2Run">Combinar</button>
+          <button id="boxes2Run">Combine</button>
         </div>
       </div>
 
       <div class="canvas-wrap">
         <div class="canvas-box">
-          <strong>Resultado</strong>
+          <strong>Result</strong>
           <canvas id="boxes2Out"></canvas>
-          <button class="dl" id="boxes2Dl" disabled>⬇ Descargar</button>
+          <button class="dl" id="boxes2Dl" disabled>⬇ Download</button>
         </div>
       </div>
-      <p class="hint" id="boxes2Hint">En modo porcentaje, el ancho es % del ancho de la imagen y el alto es %
-        del alto. El último bloque de cada fila/columna se recorta si no cabe completo.</p>
+      <p class="hint" id="boxes2Hint">In percentage mode, width is % of the image width and height is %
+        of the height. The last block in each row/column is cropped if it doesn't fit.</p>
     </div>
   </section>
 
-  <!-- ================= BOXES ANIMACIÓN ================= -->
+  <!-- ================= BOXES ANIMATION ================= -->
   <section class="view" id="view-anim">
     <div class="card">
-      <h2>Boxes Animación <span class="badge">2–5 imágenes</span></h2>
-      <p class="desc">Genera una <strong>animación</strong> del filtro Boxes recorriendo el número de
-        divisiones <em>N</em> de la rejilla desde un mínimo hasta un máximo. Cada valor de N produce un
-        cuadro; al reproducirlos en secuencia el mosaico se afina (o se engruesa) progresivamente
-        mientras intercala las imágenes. Basado en los cuadernos <code>boxes-frames</code>.</p>
+      <h2>Boxes Animation <span class="badge">2–5 images</span></h2>
+      <p class="desc">Generates an <strong>animation</strong> of the Boxes filter by sweeping the grid's
+        number of divisions <em>N</em> from a minimum to a maximum. Each value of N produces a frame;
+        playing them back in sequence makes the mosaic progressively finer (or coarser) as it interleaves
+        the images. Based on the <code>boxes-frames</code> notebooks.</p>
 
       <div class="filebar">
         <input type="file" id="animFiles" accept="image/*" multiple>
-        <span class="hint">Selecciona entre 2 y 5 imágenes.</span>
+        <span class="hint">Select between 2 and 5 images.</span>
       </div>
       <div class="thumbs" id="animThumbs"></div>
 
       <div class="controls">
         <div class="control">
-          <label>N mínimo</label>
+          <label>Min N</label>
           <input type="number" id="animMin" min="2" max="80" value="2">
         </div>
         <div class="control">
-          <label>N máximo</label>
+          <label>Max N</label>
           <input type="number" id="animMax" min="2" max="80" value="30">
         </div>
         <div class="control">
-          <label>Paso</label>
+          <label>Step</label>
           <input type="number" id="animStep" min="1" max="20" value="2">
         </div>
         <div class="control">
-          <label>Velocidad (FPS) · <span class="val" id="animFpsVal">10</span></label>
+          <label>Speed (FPS) · <span class="val" id="animFpsVal">10</span></label>
           <input type="range" id="animFps" min="1" max="30" value="10">
         </div>
         <div class="control">
-          <label>Orden</label>
+          <label>Order</label>
           <select id="animOrder">
             <option value="normal">Normal (1,2,3…)</option>
-            <option value="reverse">Invertido (…,3,2,1)</option>
+            <option value="reverse">Reversed (…,3,2,1)</option>
           </select>
         </div>
         <div class="control">
-          <label>Ajuste de tamaño</label>
+          <label>Size fit</label>
           <select id="animFit">
-            <option value="first">Al tamaño de la 1ª imagen</option>
-            <option value="min">Al tamaño mínimo común</option>
+            <option value="first">To the 1st image's size</option>
+            <option value="min">To the smallest common size</option>
           </select>
         </div>
         <div class="control">
-          <label>Bucle</label>
+          <label>Loop</label>
           <div class="switch" style="height:38px">
             <input type="checkbox" id="animPing" checked>
-            <label for="animPing" style="text-transform:none;color:var(--text)">Ida y vuelta</label>
+            <label for="animPing" style="text-transform:none;color:var(--text)">Ping-pong</label>
           </div>
         </div>
         <div class="control">
-          <button id="animRun">Generar animación</button>
+          <button id="animRun">Generate animation</button>
         </div>
       </div>
 
       <div class="canvas-wrap">
         <div class="canvas-box">
-          <strong>Animación</strong>
+          <strong>Animation</strong>
           <canvas id="animOut"></canvas>
           <div class="row" style="justify-content:center">
-            <button class="ghost" id="animPlay" disabled>▶ Reproducir</button>
-            <button class="dl" id="animVideo" disabled>⬇ Descargar (MP4)</button>
-            <button class="ghost" id="animFrameDl" disabled>⬇ Cuadro (PNG)</button>
+            <button class="ghost" id="animPlay" disabled>▶ Play</button>
+            <button class="dl" id="animVideo" disabled>⬇ Download (MP4)</button>
+            <button class="ghost" id="animFrameDl" disabled>⬇ Frame (PNG)</button>
           </div>
-          <span class="hint" id="animStatus">Sube imágenes y pulsa «Generar animación».</span>
+          <span class="hint" id="animStatus">Upload images and press “Generate animation”.</span>
         </div>
       </div>
-      <p class="hint">Con N grande cada celda es más pequeña y el mosaico es más fino. Para animaciones
-        muy largas los cuadros se limitan y el tamaño se reduce para no agotar la memoria del navegador.
-        La exportación de vídeo usa <code>MediaRecorder</code> y prefiere <strong>MP4</strong> (más
-        compatible al compartir); si el navegador no puede grabar MP4 usa WebM, y si no admite grabar
-        el canvas (p. ej. algunos iOS) usa «Cuadro (PNG)» para guardar el fotograma visible.</p>
+      <p class="hint">With a larger N each cell is smaller and the mosaic is finer. For very long
+        animations the number of frames is limited and the size is reduced so the browser doesn't run out
+        of memory. Video export uses <code>MediaRecorder</code> and prefers <strong>MP4</strong> (more
+        compatible when sharing); if the browser can't record MP4 it uses WebM, and if it can't record the
+        canvas (e.g. some iOS) use “Frame (PNG)” to save the visible frame.</p>
     </div>
   </section>
 
@@ -345,9 +345,9 @@
   <section class="view" id="view-fill">
     <div class="card">
       <h2>Horizontal / Vertical Fill</h2>
-      <p class="desc">A partir de un porcentaje de inicio y una dirección, replica la fila o columna del
-        borde para rellenar el resto de la imagen. Incluye el <strong>nuevo modo combinado</strong>
-        (horizontal + vertical a la vez).</p>
+      <p class="desc">From a start percentage and a direction, it replicates the edge row or column to
+        fill the rest of the image. Includes the <strong>new combined mode</strong>
+        (horizontal + vertical at once).</p>
 
       <div class="filebar">
         <input type="file" id="fillFile" accept="image/*">
@@ -356,32 +356,32 @@
 
       <div class="controls">
         <div class="control">
-          <label>Dirección</label>
+          <label>Direction</label>
           <select id="fillDir">
-            <option value="left">Left (rellena izquierda)</option>
-            <option value="right">Right (rellena derecha)</option>
-            <option value="up">Up (rellena arriba)</option>
-            <option value="down">Down (rellena abajo)</option>
+            <option value="left">Left (fills left)</option>
+            <option value="right">Right (fills right)</option>
+            <option value="up">Up (fills up)</option>
+            <option value="down">Down (fills down)</option>
             <option value="diagonal">Diagonal</option>
           </select>
         </div>
         <div class="control" id="fillPctControl">
-          <label>Inicio del relleno · <span class="val" id="fillPctVal">30%</span></label>
+          <label>Fill start · <span class="val" id="fillPctVal">30%</span></label>
           <input type="range" id="fillPct" min="0" max="100" value="30">
         </div>
       </div>
 
       <div class="controls" id="fillDiagControls" style="display:none">
         <div class="control">
-          <label>Inicio X · <span class="val" id="fillDxVal">50%</span></label>
+          <label>Start X · <span class="val" id="fillDxVal">50%</span></label>
           <input type="range" id="fillDx" min="0" max="100" value="50">
         </div>
         <div class="control">
-          <label>Inicio Y · <span class="val" id="fillDyVal">50%</span></label>
+          <label>Start Y · <span class="val" id="fillDyVal">50%</span></label>
           <input type="range" id="fillDy" min="0" max="100" value="50">
         </div>
         <div class="control">
-          <label>Pendiente · <span class="val" id="fillSlopeVal">1.0</span></label>
+          <label>Slope · <span class="val" id="fillSlopeVal">1.0</span></label>
           <input type="range" id="fillSlope" min="-4" max="4" step="0.1" value="1">
         </div>
       </div>
@@ -390,30 +390,30 @@
         <div class="switch">
           <input type="checkbox" id="fillCombine">
           <label for="fillCombine" style="text-transform:none;color:var(--text)">
-            <strong>Modo combinado</strong> — aplicar relleno horizontal y vertical simultáneamente
+            <strong>Combined mode</strong> — apply horizontal and vertical fill simultaneously
           </label>
         </div>
         <div class="controls" id="fillCombineControls" style="display:none;margin-top:14px">
           <div class="control">
-            <label>Dirección horizontal</label>
+            <label>Horizontal direction</label>
             <select id="fillHDir">
               <option value="left">Left</option>
               <option value="right">Right</option>
             </select>
           </div>
           <div class="control">
-            <label>Inicio horizontal · <span class="val" id="fillHPctVal">30%</span></label>
+            <label>Horizontal start · <span class="val" id="fillHPctVal">30%</span></label>
             <input type="range" id="fillHPct" min="0" max="100" value="30">
           </div>
           <div class="control">
-            <label>Dirección vertical</label>
+            <label>Vertical direction</label>
             <select id="fillVDir">
               <option value="up">Up</option>
               <option value="down">Down</option>
             </select>
           </div>
           <div class="control">
-            <label>Inicio vertical · <span class="val" id="fillVPctVal">30%</span></label>
+            <label>Vertical start · <span class="val" id="fillVPctVal">30%</span></label>
             <input type="range" id="fillVPct" min="0" max="100" value="30">
           </div>
         </div>
@@ -425,9 +425,9 @@
           <canvas id="fillIn"></canvas>
         </div>
         <div class="canvas-box">
-          <strong>Transformada</strong>
+          <strong>Transformed</strong>
           <canvas id="fillOut"></canvas>
-          <button class="dl" id="fillDl" disabled>⬇ Descargar</button>
+          <button class="dl" id="fillDl" disabled>⬇ Download</button>
         </div>
       </div>
     </div>
@@ -437,8 +437,8 @@
   <section class="view" id="view-chroma">
     <div class="card">
       <h2>Chroma Shift</h2>
-      <p class="desc">Separa los canales de color y desplaza <strong>2 canales</strong> en una dirección
-        (efecto tipo aberración cromática / glitch RGB). Por defecto: rojo y azul en sentidos opuestos.</p>
+      <p class="desc">Separates the color channels and shifts <strong>2 channels</strong> in one direction
+        (chromatic-aberration / RGB-glitch effect). Default: red and blue in opposite directions.</p>
 
       <div class="filebar">
         <input type="file" id="chromaFile" accept="image/*">
@@ -446,37 +446,37 @@
 
       <div class="controls">
         <div class="control">
-          <label>Canal A</label>
+          <label>Channel A</label>
           <select id="chromaA">
-            <option value="0">Rojo</option>
-            <option value="1">Verde</option>
-            <option value="2" selected>Azul</option>
+            <option value="0">Red</option>
+            <option value="1">Green</option>
+            <option value="2" selected>Blue</option>
           </select>
         </div>
         <div class="control">
-          <label>Canal B</label>
+          <label>Channel B</label>
           <select id="chromaB">
-            <option value="0" selected>Rojo</option>
-            <option value="1">Verde</option>
-            <option value="2">Azul</option>
+            <option value="0" selected>Red</option>
+            <option value="1">Green</option>
+            <option value="2">Blue</option>
           </select>
         </div>
         <div class="control">
-          <label>Eje</label>
+          <label>Axis</label>
           <select id="chromaAxis">
             <option value="x">Horizontal</option>
             <option value="y">Vertical</option>
           </select>
         </div>
         <div class="control">
-          <label>Desplazamiento · <span class="val" id="chromaAmtVal">4%</span></label>
+          <label>Shift · <span class="val" id="chromaAmtVal">4%</span></label>
           <input type="range" id="chromaAmt" min="0" max="30" step="0.5" value="4">
         </div>
         <div class="control">
-          <label>Sentido</label>
+          <label>Direction</label>
           <select id="chromaMode">
-            <option value="opposite">Opuestos (A −, B +)</option>
-            <option value="same">Mismo sentido</option>
+            <option value="opposite">Opposite (A −, B +)</option>
+            <option value="same">Same direction</option>
           </select>
         </div>
       </div>
@@ -487,19 +487,19 @@
           <canvas id="chromaIn"></canvas>
         </div>
         <div class="canvas-box">
-          <strong>Transformada</strong>
+          <strong>Transformed</strong>
           <canvas id="chromaOut"></canvas>
-          <button class="dl" id="chromaDl" disabled>⬇ Descargar</button>
+          <button class="dl" id="chromaDl" disabled>⬇ Download</button>
         </div>
       </div>
-      <p class="hint">Si eliges el mismo canal en A y B, solo se desplaza ese canal.</p>
+      <p class="hint">If you pick the same channel for A and B, only that channel is shifted.</p>
     </div>
   </section>
 </main>
 
 <footer>
-  Hecho a partir de los cuadernos de <strong>image-filters</strong> ·
-  <a href="https://github.com/elivasquezhdz/image-filters">Ver repositorio en GitHub</a>
+  Built from the <strong>image-filters</strong> notebooks ·
+  <a href="https://github.com/elivasquezhdz/image-filters">View the repository on GitHub</a>
 </footer>
 
 <script>
@@ -534,8 +534,8 @@ function imageToCanvas(img,w,h){
    Desktop & Android: a normal file download (unchanged behaviour).
    iOS / iPadOS: WebKit ignores the <a download> attribute, so on an iPhone/iPad
    the button used to do nothing at all. Instead we hand the PNG to the native
-   share sheet via the Web Share API — it offers "Save Image" (guarda la imagen
-   en Fotos / carrete) as well as "Save to Files", Messages, etc. Older iOS
+   share sheet via the Web Share API — it offers "Save Image" (saves the image
+   to Photos / camera roll) as well as "Save to Files", Messages, etc. Older iOS
    without Web Share falls back to opening the image so it can be saved with a
    long-press. */
 function download(canvas,name){
@@ -614,7 +614,7 @@ function openImageInTab(blob){
 
   filesInput.addEventListener('change',async e=>{
     let files=[...e.target.files];
-    if(files.length>5){ alert('Máximo 5 imágenes; se usarán las primeras 5.'); files=files.slice(0,5); }
+    if(files.length>5){ alert('Maximum 5 images; the first 5 will be used.'); files=files.slice(0,5); }
     images=[];
     thumbs.innerHTML='';
     for(const f of files){
@@ -625,7 +625,7 @@ function openImageInTab(blob){
   });
 
   runBtn.addEventListener('click',()=>{
-    if(images.length<2){ alert('Selecciona al menos 2 imágenes.'); return; }
+    if(images.length<2){ alert('Select at least 2 images.'); return; }
     const N=parseInt(sideSlider.value,10);
     // common size
     let W,H;
@@ -663,7 +663,7 @@ function openImageInTab(blob){
 })();
 
 /* ================================================================== */
-/*  BOXES — por tamaño de bloque (px o %)                            */
+/*  BOXES — by block size (px or %)                                  */
 /* ================================================================== */
 (function(){
   const filesInput=document.getElementById('boxes2Files');
@@ -684,12 +684,12 @@ function openImageInTab(blob){
       wInput.max=100; hInput.max=100;
       if(parseFloat(wInput.value)>100) wInput.value=100;
       if(parseFloat(hInput.value)>100) hInput.value=100;
-      hint.textContent='En modo porcentaje, el ancho es % del ancho de la imagen y el alto es % del alto. '+
-        'El último bloque de cada fila/columna se recorta si no cabe completo.';
+      hint.textContent='In percentage mode, width is % of the image width and height is % of the height. '+
+        'The last block in each row/column is cropped if it doesn\'t fit.';
     }else{
       wInput.removeAttribute('max'); hInput.removeAttribute('max');
-      hint.textContent='En modo píxeles, el ancho y el alto del bloque se dan en px. '+
-        'El último bloque de cada fila/columna se recorta si no cabe completo.';
+      hint.textContent='In pixel mode, block width and height are given in px. '+
+        'The last block in each row/column is cropped if it doesn\'t fit.';
     }
   }
   unitSel.addEventListener('change',syncUnitUI);
@@ -697,7 +697,7 @@ function openImageInTab(blob){
 
   filesInput.addEventListener('change',async e=>{
     let files=[...e.target.files];
-    if(files.length>5){ alert('Máximo 5 imágenes; se usarán las primeras 5.'); files=files.slice(0,5); }
+    if(files.length>5){ alert('Maximum 5 images; the first 5 will be used.'); files=files.slice(0,5); }
     images=[]; thumbs.innerHTML='';
     for(const f of files){
       const img=await loadImage(f);
@@ -707,7 +707,7 @@ function openImageInTab(blob){
   });
 
   runBtn.addEventListener('click',()=>{
-    if(images.length<2){ alert('Selecciona al menos 2 imágenes.'); return; }
+    if(images.length<2){ alert('Select at least 2 images.'); return; }
     let W,H;
     if(fitSel.value==='min'){
       W=Math.min(...images.map(i=>i.width));
@@ -749,11 +749,11 @@ function openImageInTab(blob){
     dlBtn.disabled=false;
   });
 
-  dlBtn.addEventListener('click',()=>download(outCanvas,'boxes_bloques.png'));
+  dlBtn.addEventListener('click',()=>download(outCanvas,'boxes_blocks.png'));
 })();
 
 /* ================================================================== */
-/*  BOXES — ANIMACIÓN (barrido del número de divisiones N)           */
+/*  BOXES — ANIMATION (sweep of the number of divisions N)           */
 /* ================================================================== */
 (function(){
   const filesInput=document.getElementById('animFiles');
@@ -790,7 +790,7 @@ function openImageInTab(blob){
 
   filesInput.addEventListener('change',async e=>{
     let files=[...e.target.files];
-    if(files.length>5){ alert('Máximo 5 imágenes; se usarán las primeras 5.'); files=files.slice(0,5); }
+    if(files.length>5){ alert('Maximum 5 images; the first 5 will be used.'); files=files.slice(0,5); }
     images=[]; thumbs.innerHTML='';
     for(const f of files){
       const img=await loadImage(f);
@@ -832,7 +832,7 @@ function openImageInTab(blob){
     if(!frames.length) return;
     const fi=seq[((pos%seq.length)+seq.length)%seq.length];
     outCanvas.getContext('2d').drawImage(frames[fi],0,0);
-    status.textContent=`Cuadro ${fi+1}/${frames.length} · N=${Nlist[fi]}`+(recording?' · grabando…':'');
+    status.textContent=`Frame ${fi+1}/${frames.length} · N=${Nlist[fi]}`+(recording?' · recording…':'');
   }
 
   function startTimer(){
@@ -845,17 +845,17 @@ function openImageInTab(blob){
   }
   function play(){
     if(playing||!frames.length) return;
-    playing=true; playBtn.textContent='⏸ Pausa';
+    playing=true; playBtn.textContent='⏸ Pause';
     startTimer();
   }
   function pause(){
-    playing=false; playBtn.textContent='▶ Reproducir';
+    playing=false; playBtn.textContent='▶ Play';
     if(timer){clearInterval(timer);timer=null;}
   }
   playBtn.addEventListener('click',()=>{ playing?pause():play(); });
 
   runBtn.addEventListener('click',()=>{
-    if(images.length<2){ alert('Selecciona al menos 2 imágenes.'); return; }
+    if(images.length<2){ alert('Select at least 2 images.'); return; }
     let minN=parseInt(minInput.value,10)||2;
     let maxN=parseInt(maxInput.value,10)||minN;
     let step=parseInt(stepInput.value,10)||1;
@@ -899,19 +899,19 @@ function openImageInTab(blob){
     playBtn.disabled=false; frameDlBtn.disabled=false;
     const vtype=pickVideoType();
     videoBtn.disabled=!vtype;
-    videoBtn.title=vtype?'':'Grabación de vídeo no disponible en este navegador';
-    videoBtn.textContent=vtype?`⬇ Descargar (${vtype.ext.toUpperCase()})`:'⬇ Descargar (vídeo)';
-    status.textContent=`${frames.length} cuadros (N ${minN}–${Nlist[Nlist.length-1]}) · ${W}×${H}`
-      +(capped?` · limitado a ${MAX_FRAMES} cuadros`:'');
+    videoBtn.title=vtype?'':'Video recording not available in this browser';
+    videoBtn.textContent=vtype?`⬇ Download (${vtype.ext.toUpperCase()})`:'⬇ Download (video)';
+    status.textContent=`${frames.length} frames (N ${minN}–${Nlist[Nlist.length-1]}) · ${W}×${H}`
+      +(capped?` · limited to ${MAX_FRAMES} frames`:'');
     play();
   });
 
-  /* ---- Exportación de vídeo con MediaRecorder sobre el canvas ----
-     Se prefiere MP4 (H.264): es mucho más compatible al compartir
-     (WhatsApp, Fotos de iOS, redes) que WebM. Si el navegador no puede
-     grabar MP4 (p. ej. Firefox) se recurre a WebM, y si no admite grabar
-     el canvas (algunos iOS) queda la descarga de un cuadro en PNG.
-     Devuelve {mime, ext} o null si no hay grabación disponible. */
+  /* ---- Video export via MediaRecorder over the canvas ----
+     MP4 (H.264) is preferred: it's far more compatible when sharing
+     (WhatsApp, iOS Photos, social apps) than WebM. If the browser can't
+     record MP4 (e.g. Firefox) it falls back to WebM, and if it can't record
+     the canvas at all (some iOS) the PNG single-frame download remains.
+     Returns {mime, ext} or null if no recording is available. */
   function pickVideoType(){
     if(typeof MediaRecorder==='undefined' || typeof outCanvas.captureStream!=='function') return null;
     // Only accept MP4 when a concrete H.264 (avc1) codec is supported. Some
@@ -927,29 +927,29 @@ function openImageInTab(blob){
   videoBtn.addEventListener('click',()=>{
     if(!frames.length||recording) return;
     const vtype=pickVideoType();
-    if(!vtype){ alert('Tu navegador no permite grabar vídeo. Usa «Cuadro (PNG)».'); return; }
+    if(!vtype){ alert('Your browser can\'t record video. Use “Frame (PNG)”.'); return; }
     pause();
     const fps=Math.max(1,parseInt(fpsSlider.value,10)||10);
     let stream, rec;
     try{
       stream=outCanvas.captureStream(fps);
       rec=new MediaRecorder(stream,{mimeType:vtype.mime});
-    }catch(err){ alert('No se pudo iniciar la grabación: '+err.message); return; }
+    }catch(err){ alert('Couldn\'t start recording: '+err.message); return; }
     const chunks=[];
     rec.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
     rec.onstop=()=>{
       recording=false;
-      videoBtn.disabled=false; videoBtn.textContent=`⬇ Descargar (${vtype.ext.toUpperCase()})`;
+      videoBtn.disabled=false; videoBtn.textContent=`⬇ Download (${vtype.ext.toUpperCase()})`;
       const blob=new Blob(chunks,{type:vtype.mime});
       const url=URL.createObjectURL(blob);
       const a=document.createElement('a'); a.href=url; a.download=`boxes_anim.${vtype.ext}`;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(()=>URL.revokeObjectURL(url),60000);
-      status.textContent=`${vtype.ext.toUpperCase()} descargado · ${frames.length} cuadros.`;
+      status.textContent=`${vtype.ext.toUpperCase()} downloaded · ${frames.length} frames.`;
       play(); // resume live preview
     };
     recording=true;
-    videoBtn.disabled=true; videoBtn.textContent='Grabando…';
+    videoBtn.disabled=true; videoBtn.textContent='Recording…';
     const frameMs=1000/fps;
     rec.start();
     // Drive exactly one full playback cycle in real time so the recorder
