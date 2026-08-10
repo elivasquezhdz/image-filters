@@ -327,7 +327,7 @@
           <canvas id="animOut"></canvas>
           <div class="row" style="justify-content:center">
             <button class="ghost" id="animPlay" disabled>▶ Reproducir</button>
-            <button class="dl" id="animWebm" disabled>⬇ Descargar (WebM)</button>
+            <button class="dl" id="animVideo" disabled>⬇ Descargar (MP4)</button>
             <button class="ghost" id="animFrameDl" disabled>⬇ Cuadro (PNG)</button>
           </div>
           <span class="hint" id="animStatus">Sube imágenes y pulsa «Generar animación».</span>
@@ -335,8 +335,9 @@
       </div>
       <p class="hint">Con N grande cada celda es más pequeña y el mosaico es más fino. Para animaciones
         muy largas los cuadros se limitan y el tamaño se reduce para no agotar la memoria del navegador.
-        La exportación WebM usa <code>MediaRecorder</code>; si tu navegador no la admite (p. ej. algunos
-        iOS), usa «Cuadro (PNG)» para guardar el fotograma visible.</p>
+        La exportación de vídeo usa <code>MediaRecorder</code> y prefiere <strong>MP4</strong> (más
+        compatible al compartir); si el navegador no puede grabar MP4 usa WebM, y si no admite grabar
+        el canvas (p. ej. algunos iOS) usa «Cuadro (PNG)» para guardar el fotograma visible.</p>
     </div>
   </section>
 
@@ -768,7 +769,7 @@ function openImageInTab(blob){
   const runBtn=document.getElementById('animRun');
   const outCanvas=document.getElementById('animOut');
   const playBtn=document.getElementById('animPlay');
-  const webmBtn=document.getElementById('animWebm');
+  const videoBtn=document.getElementById('animVideo');
   const frameDlBtn=document.getElementById('animFrameDl');
   const status=document.getElementById('animStatus');
 
@@ -896,53 +897,59 @@ function openImageInTab(blob){
     seqPos=0; drawAt(0);
 
     playBtn.disabled=false; frameDlBtn.disabled=false;
-    const canWebm=webmSupported();
-    webmBtn.disabled=!canWebm;
-    webmBtn.title=canWebm?'':'No disponible en este navegador';
+    const vtype=pickVideoType();
+    videoBtn.disabled=!vtype;
+    videoBtn.title=vtype?'':'Grabación de vídeo no disponible en este navegador';
+    videoBtn.textContent=vtype?`⬇ Descargar (${vtype.ext.toUpperCase()})`:'⬇ Descargar (vídeo)';
     status.textContent=`${frames.length} cuadros (N ${minN}–${Nlist[Nlist.length-1]}) · ${W}×${H}`
       +(capped?` · limitado a ${MAX_FRAMES} cuadros`:'');
     play();
   });
 
-  /* ---- Exportación WebM mediante MediaRecorder sobre el canvas ---- */
-  function webmSupported(){
-    return typeof MediaRecorder!=='undefined'
-        && typeof outCanvas.captureStream==='function'
-        && (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-         || MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
-         || MediaRecorder.isTypeSupported('video/webm'));
+  /* ---- Exportación de vídeo con MediaRecorder sobre el canvas ----
+     Se prefiere MP4 (H.264): es mucho más compatible al compartir
+     (WhatsApp, Fotos de iOS, redes) que WebM. Si el navegador no puede
+     grabar MP4 (p. ej. Firefox) se recurre a WebM, y si no admite grabar
+     el canvas (algunos iOS) queda la descarga de un cuadro en PNG.
+     Devuelve {mime, ext} o null si no hay grabación disponible. */
+  function pickVideoType(){
+    if(typeof MediaRecorder==='undefined' || typeof outCanvas.captureStream!=='function') return null;
+    // Only accept MP4 when a concrete H.264 (avc1) codec is supported. Some
+    // builds report bare "video/mp4" as supported yet have no H.264 encoder
+    // and then emit a broken file, so the generic type is deliberately NOT
+    // trusted — we fall back to WebM there instead.
+    const mp4=['video/mp4;codecs=avc1.42E01E','video/mp4;codecs=avc1.4d002a','video/mp4;codecs=avc1','video/mp4;codecs=h264'];
+    const webm=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+    for(const m of mp4)  if(MediaRecorder.isTypeSupported(m)) return {mime:m, ext:'mp4'};
+    for(const m of webm) if(MediaRecorder.isTypeSupported(m)) return {mime:m, ext:'webm'};
+    return null;
   }
-  function pickMime(){
-    const cands=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
-    for(const m of cands) if(MediaRecorder.isTypeSupported(m)) return m;
-    return 'video/webm';
-  }
-  webmBtn.addEventListener('click',()=>{
+  videoBtn.addEventListener('click',()=>{
     if(!frames.length||recording) return;
-    if(!webmSupported()){ alert('Tu navegador no permite exportar WebM. Usa «Cuadro (PNG)».'); return; }
+    const vtype=pickVideoType();
+    if(!vtype){ alert('Tu navegador no permite grabar vídeo. Usa «Cuadro (PNG)».'); return; }
     pause();
     const fps=Math.max(1,parseInt(fpsSlider.value,10)||10);
-    const mime=pickMime();
     let stream, rec;
     try{
       stream=outCanvas.captureStream(fps);
-      rec=new MediaRecorder(stream,{mimeType:mime});
+      rec=new MediaRecorder(stream,{mimeType:vtype.mime});
     }catch(err){ alert('No se pudo iniciar la grabación: '+err.message); return; }
     const chunks=[];
     rec.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
     rec.onstop=()=>{
       recording=false;
-      webmBtn.disabled=false; webmBtn.textContent='⬇ Descargar (WebM)';
-      const blob=new Blob(chunks,{type:mime});
+      videoBtn.disabled=false; videoBtn.textContent=`⬇ Descargar (${vtype.ext.toUpperCase()})`;
+      const blob=new Blob(chunks,{type:vtype.mime});
       const url=URL.createObjectURL(blob);
-      const a=document.createElement('a'); a.href=url; a.download='boxes_anim.webm';
+      const a=document.createElement('a'); a.href=url; a.download=`boxes_anim.${vtype.ext}`;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(()=>URL.revokeObjectURL(url),60000);
-      status.textContent=`WebM descargado · ${frames.length} cuadros.`;
+      status.textContent=`${vtype.ext.toUpperCase()} descargado · ${frames.length} cuadros.`;
       play(); // resume live preview
     };
     recording=true;
-    webmBtn.disabled=true; webmBtn.textContent='Grabando…';
+    videoBtn.disabled=true; videoBtn.textContent='Grabando…';
     const frameMs=1000/fps;
     rec.start();
     // Drive exactly one full playback cycle in real time so the recorder
