@@ -77,6 +77,25 @@ Parámetros:
 - **Desplazamiento:** porcentaje del ancho de la imagen.
 - **Sentido:** opuestos (uno hacia cada lado) o el mismo.
 
+### 5. 🪞 4-Way Collage
+Toma **una sola imagen** y construye un **mosaico 2×2 en espejo** (original, volteo
+horizontal, volteo vertical y ambos). Después divide ese mosaico en **secciones** que
+se intercalan de afuera hacia adentro, generando un collage simétrico de aspecto
+caleidoscópico. Es el port de los cuadernos `4waycollage` / `collage_mix` (y del
+script `live_collage.py`), integrado desde el proyecto
+[4way_collage](https://github.com/elivasquezhdz/4way_collage).
+
+Hay dos secciones:
+- **Collage:** ajusta el número de **secciones** (2–60). A mayor número, la simetría
+  es más fina e intrincada. El resultado se renderiza a partir de un mosaico 2× y se
+  escala de vuelta al tamaño original, así que no hay distorsión.
+- **Collage Animación:** recorre el número de secciones desde un inicio hasta un fin
+  con un incremento y reproduce el barrido como un bucle. Orden **forward**,
+  **reverse** o **bounce** (ida y vuelta). Exporta a **GIF animado** (con
+  [`gif.js`](docs/vendor/gif.js)) o a **vídeo** (`MediaRecorder`, prefiriendo MP4), y
+  permite guardar el **cuadro visible como PNG** para navegadores sin grabación de
+  canvas (p. ej. algunos iOS).
+
 ## Script de Python: relleno combinado
 
 `combined_fill.py` implementa la combinación de relleno horizontal + vertical
@@ -90,19 +109,34 @@ python combined_fill.py entrada.jpg salida.png \
 
 Requiere `opencv-python` (o `opencv-python-headless`) y `numpy`.
 
+## Script de Python: collage en vivo (webcam)
+
+`live_collage.py` aplica el efecto **4-Way Collage** en tiempo real a la cámara con
+OpenCV (la misma lógica de mosaico + secciones que la web).
+
+```bash
+python live_collage.py   # pulsa 'q' o Esc para salir
+```
+
+Requiere `opencv-python` (o `opencv-python-headless`) y `numpy`.
+
 ## Estructura del proyecto
 
 ```
 docs/index.html      → aplicación web (se publica en GitHub Pages)
+docs/vendor/         → gif.js (codificación de GIF para la animación del collage)
 combined_fill.py     → script de relleno combinado horizontal + vertical
+live_collage.py      → collage 4-way en vivo desde la webcam (OpenCV)
 *.ipynb              → cuadernos originales con los algoritmos
+    4waycollage*.ipynb, collage_mix.ipynb → algoritmo del 4-Way Collage
 .github/workflows/   → workflow que publica docs/ en GitHub Pages
 ```
 
 ## Desarrollo local
 
-La web es un único archivo estático sin dependencias. Puedes abrir
-`docs/index.html` directamente en el navegador, o servirlo localmente:
+La web son archivos estáticos sin build ni dependencias externas (`docs/index.html`
+más `docs/vendor/gif.js`). Puedes abrir `docs/index.html` directamente en el
+navegador, o servirlo localmente:
 
 ```bash
 cd docs && python3 -m http.server 8000

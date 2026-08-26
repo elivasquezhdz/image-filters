@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Image Filters — Boxes · Animation · Fill · Chroma Shift</title>
+<title>Image Filters — Boxes · Animation · Fill · Chroma Shift · Collage</title>
 <style>
   :root{
     --bg:#0f1115;
@@ -154,6 +154,7 @@
   <button class="tab" data-view="anim">🎞️ Boxes Animation</button>
   <button class="tab" data-view="fill">🪣 Horizontal / Vertical Fill</button>
   <button class="tab" data-view="chroma">🌈 Chroma Shift</button>
+  <button class="tab" data-view="collage">🪞 4-Way Collage</button>
 </div>
 
 <main>
@@ -495,6 +496,93 @@
       <p class="hint">If you pick the same channel for A and B, only that channel is shifted.</p>
     </div>
   </section>
+
+  <!-- ================= 4-WAY COLLAGE ================= -->
+  <section class="view" id="view-collage">
+    <div class="card">
+      <h2>4-Way Collage <span class="badge">1 image</span></h2>
+      <p class="desc">Builds a mirrored <strong>2×2 mosaic</strong> from a single image (original, horizontal
+        flip, vertical flip, and both) and then slices it into <em>sections</em> that are interleaved from the
+        outside in, producing a kaleidoscopic, symmetric collage. Port of the <code>4waycollage</code> /
+        <code>collage_mix</code> notebooks (see also <code>live_collage.py</code>).</p>
+
+      <div class="filebar">
+        <input type="file" id="collageFile" accept="image/*">
+        <span class="hint">Pick a single image.</span>
+      </div>
+
+      <div class="controls">
+        <div class="control">
+          <label>Sections · <span class="val" id="collageSecVal">20</span></label>
+          <input type="range" id="collageSec" min="2" max="60" value="20">
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <div class="canvas-box">
+          <strong>Original</strong>
+          <canvas id="collageIn"></canvas>
+        </div>
+        <div class="canvas-box">
+          <strong>Collage</strong>
+          <canvas id="collageOut"></canvas>
+          <button class="dl" id="collageDl" disabled>⬇ Download</button>
+        </div>
+      </div>
+      <p class="hint">More sections make a finer, more intricate symmetry. The collage is rendered from a
+        2× mosaic and scaled back to the original size, so there's no distortion.</p>
+    </div>
+
+    <div class="card">
+      <h2>Collage Animation</h2>
+      <p class="desc">Sweeps the number of <em>sections</em> across a range and plays it back as a loop you can
+        export as an animated <strong>GIF</strong> or a <strong>video</strong>.</p>
+
+      <div class="controls">
+        <div class="control">
+          <label>Start</label>
+          <input type="number" id="collageAnimStart" min="2" max="60" value="2">
+        </div>
+        <div class="control">
+          <label>End</label>
+          <input type="number" id="collageAnimEnd" min="2" max="60" value="60">
+        </div>
+        <div class="control">
+          <label>Increment</label>
+          <input type="number" id="collageAnimStep" min="1" max="58" value="2">
+        </div>
+        <div class="control">
+          <label>Order</label>
+          <select id="collageAnimOrder">
+            <option value="forward">Forward</option>
+            <option value="reverse">Reverse</option>
+            <option value="bounce">Bounce (back &amp; forth)</option>
+          </select>
+        </div>
+        <div class="control">
+          <button id="collageAnimRun" disabled>Generate animation</button>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <div class="canvas-box">
+          <strong>Preview</strong>
+          <canvas id="collageAnimOut"></canvas>
+          <div class="row" style="justify-content:center">
+            <button class="ghost" id="collageAnimPlay" disabled>▶ Play</button>
+            <button class="dl" id="collageAnimGif" disabled>⬇ Download GIF</button>
+            <button class="dl" id="collageAnimVideo" disabled>⬇ Download video</button>
+            <button class="ghost" id="collageAnimFrame" disabled>⬇ Frame (PNG)</button>
+          </div>
+          <span class="hint" id="collageAnimStatus">Upload an image, then press “Generate animation”.</span>
+        </div>
+      </div>
+      <p class="hint">Frames are downscaled so the browser stays responsive. GIF export uses
+        <code>gif.js</code>; video uses <code>MediaRecorder</code> and prefers <strong>MP4</strong> (more
+        compatible when sharing) when available. On browsers that can't record the canvas (e.g. some iOS)
+        use “Frame (PNG)” to save the visible frame.</p>
+    </div>
+  </section>
 </main>
 
 <footer>
@@ -502,6 +590,7 @@
   <a href="https://github.com/elivasquezhdz/image-filters">View the repository on GitHub</a>
 </footer>
 
+<script src="vendor/gif.js"></script>
 <script>
 /* ------------------------------------------------------------------ */
 /*  Tabs                                                              */
@@ -1163,6 +1252,276 @@ function openImageInTab(blob){
   amt.addEventListener('input',()=>{amtVal.textContent=amt.value+'%';render();});
   [chA,chB,axis,mode].forEach(el=>el.addEventListener('change',render));
   dlBtn.addEventListener('click',()=>download(outCanvas,'chroma_shift.png'));
+})();
+
+/* ================================================================== */
+/*  4-WAY COLLAGE                                                     */
+/* ================================================================== */
+(function(){
+  const fileInput=document.getElementById('collageFile');
+  const secSlider=document.getElementById('collageSec');
+  const secVal=document.getElementById('collageSecVal');
+  const inCanvas=document.getElementById('collageIn');
+  const outCanvas=document.getElementById('collageOut');
+  const dlBtn=document.getElementById('collageDl');
+
+  // animation controls
+  const aStart=document.getElementById('collageAnimStart');
+  const aEnd=document.getElementById('collageAnimEnd');
+  const aStep=document.getElementById('collageAnimStep');
+  const aOrder=document.getElementById('collageAnimOrder');
+  const aRun=document.getElementById('collageAnimRun');
+  const aOut=document.getElementById('collageAnimOut');
+  const aPlay=document.getElementById('collageAnimPlay');
+  const aGif=document.getElementById('collageAnimGif');
+  const aVideo=document.getElementById('collageAnimVideo');
+  const aFrame=document.getElementById('collageAnimFrame');
+  const aStatus=document.getElementById('collageAnimStatus');
+
+  const FRAME_MAX_SIDE=480;  // max long side of each animation frame (px)
+  const FRAME_DELAY=70;      // ms per frame
+  const MAX_FRAMES=120;      // cap so the browser doesn't run out of memory
+
+  let sourceImage=null;
+  let sourceName='collage';
+  let frames=[];       // rendered frame canvases
+  let playTimer=null;  // preview playback timer
+  let recording=false;
+
+  /* ---------- core algorithm (mirrors live_collage.py / the notebooks) ---------- */
+  // 2×2 mirrored mosaic: original, h-flip, v-flip, hv-flip.
+  function createMosaic(img){
+    const w=img.width, h=img.height;
+    const c=document.createElement('canvas');
+    c.width=w*2; c.height=h*2;
+    const ctx=c.getContext('2d');
+    ctx.drawImage(img,0,0);
+    ctx.save(); ctx.scale(-1,1);  ctx.drawImage(img,-2*w,0);    ctx.restore(); // horizontal flip
+    ctx.save(); ctx.scale(1,-1);  ctx.drawImage(img,0,-2*h);    ctx.restore(); // vertical flip
+    ctx.save(); ctx.scale(-1,-1); ctx.drawImage(img,-2*w,-2*h); ctx.restore(); // both
+    return c;
+  }
+  function getSlice(src,x,y,w,h){
+    const c=document.createElement('canvas');
+    c.width=w; c.height=h;
+    c.getContext('2d').drawImage(src,x,y,w,h,0,0,w,h);
+    return c;
+  }
+  // Slice into `sections` strips (vertical or horizontal) and interleave them
+  // from the outside in: 1st, last, 2nd, 2nd-last, …
+  function sliceAndReorder(canvas,sections,orientation){
+    const w=canvas.width, h=canvas.height;
+    const slices=[];
+    if(orientation==='v'){
+      const sw=Math.floor(w/sections);
+      for(let i=0;i<sections;i++){ const cw=i===sections-1? w-sw*i : sw; slices.push(getSlice(canvas,i*sw,0,cw,h)); }
+    }else{
+      const sh=Math.floor(h/sections);
+      for(let i=0;i<sections;i++){ const ch=i===sections-1? h-sh*i : sh; slices.push(getSlice(canvas,0,i*sh,w,ch)); }
+    }
+    const out=document.createElement('canvas');
+    out.width=w; out.height=h;
+    const octx=out.getContext('2d');
+    for(let i=0;i<Math.floor(sections/2);i++){
+      const a=slices[i], b=slices[sections-1-i];
+      if(orientation==='v'){ octx.drawImage(a,a.width*(i*2),0); octx.drawImage(b,a.width*(2*i+1),0); }
+      else{ octx.drawImage(a,0,a.height*(i*2)); octx.drawImage(b,0,a.height*(2*i+1)); }
+    }
+    return out;
+  }
+  function renderCollage(src,sections){
+    const mosaic=createMosaic(src);
+    const vc=sliceAndReorder(mosaic,sections,'v');
+    return sliceAndReorder(vc,sections,'h');
+  }
+
+  /* ---------- static collage ---------- */
+  function drawStatic(){
+    if(!sourceImage) return;
+    const sections=parseInt(secSlider.value,10);
+    const collage=renderCollage(sourceImage,sections);
+    // The collage is 2× the source; scale it back to the source size (same aspect ratio).
+    outCanvas.width=sourceImage.width;
+    outCanvas.height=sourceImage.height;
+    outCanvas.getContext('2d').drawImage(collage,0,0,sourceImage.width,sourceImage.height);
+    dlBtn.disabled=false;
+  }
+
+  secSlider.addEventListener('input',()=>{ secVal.textContent=secSlider.value; if(sourceImage) drawStatic(); });
+
+  fileInput.addEventListener('change',async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    sourceName=(f.name||'collage').replace(/\.[^.]+$/,'')||'collage';
+    sourceImage=await loadImage(f);
+    inCanvas.width=sourceImage.width; inCanvas.height=sourceImage.height;
+    inCanvas.getContext('2d').drawImage(sourceImage,0,0);
+    drawStatic();
+    aRun.disabled=false;
+    resetAnimation();
+  });
+
+  dlBtn.addEventListener('click',()=>download(outCanvas,sourceName+'_collage.png'));
+
+  /* ---------- animation ---------- */
+  // Downscale the source so each collage frame's long side is <= FRAME_MAX_SIDE
+  // (the collage output is twice the source dimensions).
+  function scaledSource(img,maxSide){
+    const scale=Math.min(1,maxSide/Math.max(img.width,img.height));
+    const w=Math.max(1,Math.round(img.width*scale));
+    const h=Math.max(1,Math.round(img.height*scale));
+    const c=document.createElement('canvas');
+    c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    return c;
+  }
+  function clampSections(v){
+    const min=parseInt(secSlider.min,10), max=parseInt(secSlider.max,10);
+    if(isNaN(v)) return min;
+    return Math.max(min,Math.min(max,v));
+  }
+  function buildFrames(){
+    const scaled=scaledSource(sourceImage,FRAME_MAX_SIDE/2);
+    const start=clampSections(parseInt(aStart.value,10));
+    const end=clampSections(parseInt(aEnd.value,10));
+    let step=parseInt(aStep.value,10); if(isNaN(step)||step<1) step=1;
+    const values=[];
+    if(start<=end){ for(let s=start;s<=end && values.length<MAX_FRAMES;s+=step) values.push(s); }
+    else{ for(let s=start;s>=end && values.length<MAX_FRAMES;s-=step) values.push(s); }
+    if(!values.length) values.push(start);
+    // Forward (as swept), reversed, or bounce (forward then back for a seamless loop).
+    if(aOrder.value==='reverse') values.reverse();
+    else if(aOrder.value==='bounce'){ const back=values.slice(1,-1).reverse(); values.push(...back); }
+    return values.map(s=>renderCollage(scaled,s));
+  }
+  function stopPlay(){ if(playTimer){ clearInterval(playTimer); playTimer=null; } }
+  function startPlay(){
+    stopPlay();
+    if(!frames.length) return;
+    aOut.width=frames[0].width; aOut.height=frames[0].height;
+    const ctx=aOut.getContext('2d');
+    let i=0;
+    const draw=()=>{ ctx.drawImage(frames[i],0,0); i=(i+1)%frames.length; };
+    draw();
+    playTimer=setInterval(draw,FRAME_DELAY);
+    aPlay.textContent='⏸ Pause';
+  }
+  function resetAnimation(){
+    stopPlay();
+    frames=[];
+    aGif.disabled=true; aVideo.disabled=true; aPlay.disabled=true; aFrame.disabled=true;
+    aPlay.textContent='▶ Play';
+    aStatus.textContent = sourceImage ? 'Press “Generate animation”.'
+      : 'Upload an image, then press “Generate animation”.';
+    aOut.getContext('2d').clearRect(0,0,aOut.width,aOut.height);
+  }
+
+  aRun.addEventListener('click',()=>{
+    if(!sourceImage) return;
+    aRun.disabled=true;
+    aStatus.textContent='Rendering frames…';
+    // Defer so the status text paints before the heavy synchronous work.
+    setTimeout(()=>{
+      stopPlay();
+      frames=buildFrames();
+      startPlay();
+      aStatus.textContent=frames.length+' frames ready';
+      aPlay.disabled=false; aFrame.disabled=false;
+      aGif.disabled=(typeof GIF==='undefined');
+      const vtype=pickVideoType();
+      aVideo.disabled=!vtype;
+      aVideo.textContent=vtype?`⬇ Download video (${vtype.ext.toUpperCase()})`:'⬇ Download video';
+      aRun.disabled=false;
+    },30);
+  });
+
+  aPlay.addEventListener('click',()=>{
+    if(!frames.length) return;
+    if(playTimer){ stopPlay(); aPlay.textContent='▶ Play'; }
+    else{ startPlay(); }
+  });
+
+  // Changing the range or order invalidates any already-generated animation.
+  [aStart,aEnd,aStep,aOrder].forEach(el=>el.addEventListener('change',()=>{
+    if(frames.length){ resetAnimation(); aStatus.textContent='Settings changed — press “Generate animation”.'; }
+  }));
+
+  /* ---- GIF export (gif.js) ---- */
+  aGif.addEventListener('click',()=>{
+    if(!frames.length || typeof GIF==='undefined') return;
+    aGif.disabled=true; aVideo.disabled=true;
+    aStatus.textContent='Encoding GIF… 0%';
+    const gif=new GIF({workers:2,quality:10,workerScript:'vendor/gif.worker.js',width:frames[0].width,height:frames[0].height});
+    frames.forEach(f=>gif.addFrame(f,{delay:FRAME_DELAY,copy:true}));
+    gif.on('progress',p=>{ aStatus.textContent='Encoding GIF… '+Math.round(p*100)+'%'; });
+    gif.on('finished',blob=>{
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download=sourceName+'_collage.gif';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+      aStatus.textContent='GIF ready · '+frames.length+' frames';
+      aGif.disabled=false; aVideo.disabled=!pickVideoType();
+    });
+    gif.render();
+  });
+
+  /* ---- Video export via MediaRecorder over the preview canvas ----
+     MP4 (H.264) is preferred for sharing; falls back to WebM. Only accepts MP4
+     when a concrete H.264 codec is supported (bare "video/mp4" can lie). */
+  function pickVideoType(){
+    if(typeof MediaRecorder==='undefined' || typeof aOut.captureStream!=='function') return null;
+    const mp4=['video/mp4;codecs=avc1.42E01E','video/mp4;codecs=avc1.4d002a','video/mp4;codecs=avc1','video/mp4;codecs=h264'];
+    const webm=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+    for(const m of mp4)  if(MediaRecorder.isTypeSupported(m)) return {mime:m, ext:'mp4'};
+    for(const m of webm) if(MediaRecorder.isTypeSupported(m)) return {mime:m, ext:'webm'};
+    return null;
+  }
+  aVideo.addEventListener('click',()=>{
+    if(!frames.length||recording) return;
+    const vtype=pickVideoType();
+    if(!vtype){ alert('Your browser can\'t record video. Use “Frame (PNG)”.'); return; }
+    stopPlay();
+    const fps=Math.max(1,Math.round(1000/FRAME_DELAY));
+    aOut.width=frames[0].width; aOut.height=frames[0].height;
+    const ctx=aOut.getContext('2d');
+    let stream, rec;
+    try{
+      stream=aOut.captureStream(fps);
+      rec=new MediaRecorder(stream,{mimeType:vtype.mime});
+    }catch(err){ alert('Couldn\'t start recording: '+err.message); startPlay(); return; }
+    const chunks=[];
+    rec.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop=()=>{
+      recording=false;
+      aGif.disabled=(typeof GIF==='undefined');
+      aVideo.disabled=false; aVideo.textContent=`⬇ Download video (${vtype.ext.toUpperCase()})`;
+      const blob=new Blob(chunks,{type:vtype.mime});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download=`${sourceName}_collage.${vtype.ext}`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+      aStatus.textContent=`${vtype.ext.toUpperCase()} downloaded · ${frames.length} frames`;
+      startPlay(); // resume live preview
+    };
+    recording=true;
+    aGif.disabled=true;
+    aVideo.disabled=true; aVideo.textContent='Recording…';
+    const frameMs=FRAME_DELAY;
+    ctx.drawImage(frames[0],0,0);
+    rec.start();
+    // Play two full loops into the recording canvas, then stop.
+    let loop=0, pos=0;
+    const iv=setInterval(()=>{
+      ctx.drawImage(frames[pos],0,0);
+      pos++;
+      if(pos>=frames.length){ pos=0; loop++; if(loop>=2){ clearInterval(iv); setTimeout(()=>{ try{rec.stop();}catch(_){} }, frameMs+40); } }
+    },frameMs);
+  });
+
+  aFrame.addEventListener('click',()=>{
+    if(!frames.length) return;
+    // Save the currently visible preview frame as PNG (iOS-safe via download()).
+    download(aOut,sourceName+'_collage_frame.png');
+  });
 })();
 </script>
 </body>
