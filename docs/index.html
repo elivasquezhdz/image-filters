@@ -682,8 +682,14 @@
           <select id="vampAnimOrder">
             <option value="forward">Forward</option>
             <option value="reverse">Reverse</option>
-            <option value="bounce">Bounce (back &amp; forth)</option>
           </select>
+        </div>
+        <div class="control">
+          <label>Loop</label>
+          <div class="switch" style="height:38px">
+            <input type="checkbox" id="vampAnimPing" checked>
+            <label for="vampAnimPing" style="text-transform:none;color:var(--text)">Ping-pong</label>
+          </div>
         </div>
         <div class="control">
           <button id="vampAnimRun" disabled>Generate animation</button>
@@ -2171,6 +2177,7 @@ function openImageInTab(blob){
   const animFps=document.getElementById('vampAnimFps');
   const animFpsVal=document.getElementById('vampAnimFpsVal');
   const animOrder=document.getElementById('vampAnimOrder');
+  const animPing=document.getElementById('vampAnimPing');
   const animRun=document.getElementById('vampAnimRun');
   const animHint=document.getElementById('vampAnimHint');
   const animOut=document.getElementById('vampAnimOut');
@@ -2193,7 +2200,14 @@ function openImageInTab(blob){
   animStart.addEventListener('input',()=>{ animStartVal.textContent=animStart.value; });
   animEnd.addEventListener('input',()=>{ animEndVal.textContent=animEnd.value; });
   animFps.addEventListener('input',()=>{ animFpsVal.textContent=animFps.value; if(playing) startTimer(); });
-  [animStart,animEnd,animFrames,animOrder].forEach(el=>el.addEventListener('change',invalidate));
+  // Start/End/Frames change the rendered frames -> must regenerate.
+  [animStart,animEnd,animFrames].forEach(el=>el.addEventListener('change',invalidate));
+  // Order and Ping-pong only reorder playback, so re-sequence in place (no re-render).
+  [animOrder,animPing].forEach(el=>el.addEventListener('change',()=>{
+    if(!frames.length) return;
+    const wasPlaying=playing; pause(); buildSeq(); seqPos=0; drawAt(0);
+    if(wasPlaying) play();
+  }));
 
   function invalidate(){
     if(frames.length){ resetAnim(); animStatus.textContent='Settings changed — press “Generate animation”.'; }
@@ -2209,8 +2223,10 @@ function openImageInTab(blob){
   function buildSeq(){
     seq=frames.map((_,i)=>i);
     if(animOrder.value==='reverse') seq.reverse();
-    else if(animOrder.value==='bounce' && frames.length>2){
-      for(let i=frames.length-2;i>=1;i--) seq.push(i);
+    // Ping-pong: play the sweep, then back through the middle for a seamless loop.
+    if(animPing.checked && seq.length>2){
+      const base=seq.slice();
+      for(let i=base.length-2;i>=1;i--) seq.push(base[i]);
     }
   }
   function drawAt(pos){
