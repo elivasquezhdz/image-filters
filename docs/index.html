@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Image Filters — Boxes · Animation · Fill · Chroma Shift · Collage</title>
+<title>Image Filters — Boxes · Animation · Fill · Chroma Shift · Collage · Vampire</title>
 <style>
   :root{
     --bg:#0f1115;
@@ -140,6 +140,10 @@
   footer a{color:var(--accent);text-decoration:none}
   .combine-block{border-top:1px dashed var(--border);margin-top:14px;padding-top:14px}
   .switch{display:flex;align-items:center;gap:8px}
+  .subhead{width:100%;margin:12px 0 -2px;font-size:.75rem;color:var(--accent);
+    text-transform:uppercase;letter-spacing:.7px;font-weight:700}
+  .subhead:first-child{margin-top:0}
+  .status{color:var(--muted);font-size:.82rem}
 </style>
 </head>
 <body>
@@ -155,6 +159,7 @@
   <button class="tab" data-view="fill">🪣 Horizontal / Vertical Fill</button>
   <button class="tab" data-view="chroma">🌈 Chroma Shift</button>
   <button class="tab" data-view="collage">🪞 4-Way Collage</button>
+  <button class="tab" data-view="vampire">🧛 Vampire</button>
 </div>
 
 <main>
@@ -581,6 +586,128 @@
         <code>gif.js</code>; video uses <code>MediaRecorder</code> and prefers <strong>MP4</strong> (more
         compatible when sharing) when available. On browsers that can't record the canvas (e.g. some iOS)
         use “Frame (PNG)” to save the visible frame.</p>
+    </div>
+  </section>
+
+  <!-- ================= VAMPIRE ================= -->
+  <section class="view" id="view-vampire">
+    <div class="card">
+      <h2>Vampire Filter <span class="badge">1 image</span></h2>
+      <p class="desc">A browser port of <code>vampire_filter.py</code> — a Lightroom-style “vampire”
+        preset: crushed highlights and whites, warm white balance, punchy contrast and saturation, a
+        red/orange color grade, a heavy vignette and film grain. Every control below is seeded with the
+        preset's values; tweak them and press <strong>Apply</strong>. Everything runs locally.</p>
+
+      <div class="filebar">
+        <input type="file" id="vampFile" accept="image/*">
+        <button class="ghost" id="vampReset" disabled>Reset preset</button>
+        <span class="hint">Pick a single image.</span>
+      </div>
+
+      <div class="controls" id="vampControls"></div>
+
+      <div class="row" style="align-items:center">
+        <button id="vampApply" disabled>Apply</button>
+        <label class="switch"><input type="checkbox" id="vampGrain" checked>
+          <span style="color:var(--text)">Grain</span></label>
+        <label class="switch"><input type="checkbox" id="vampVign" checked>
+          <span style="color:var(--text)">Vignette</span></label>
+        <span class="status" id="vampStatus">Upload an image to begin.</span>
+      </div>
+
+      <div class="canvas-wrap">
+        <div class="canvas-box">
+          <strong>Original</strong>
+          <canvas id="vampIn"></canvas>
+        </div>
+        <div class="canvas-box">
+          <strong>Vampire</strong>
+          <canvas id="vampOut"></canvas>
+          <button class="dl" id="vampDl" disabled>⬇ Download</button>
+        </div>
+      </div>
+      <p class="hint">For speed and to keep the browser responsive, very large images are processed at up
+        to 2000&nbsp;px on the long side. The tone curve, color grade and color-noise reduction use the
+        preset's fixed values; the sliders expose the rest of the pipeline.</p>
+    </div>
+
+    <div class="card">
+      <h2>Vampire Animation</h2>
+      <p class="desc">Animate the filter by sweeping <strong>one parameter</strong> from a
+        <strong>start</strong> to an <strong>end</strong> value across a number of frames, then play it
+        back at your chosen <strong>FPS</strong>. All the other controls keep the values you set above, so
+        you can, for example, fade the whole look in by animating <em>Strength</em> 0 → 100, or push the
+        <em>Temperature</em> from cold to warm.</p>
+
+      <div class="controls">
+        <div class="control">
+          <label>Parameter</label>
+          <select id="vampAnimParam">
+            <option value="strength">Strength</option>
+            <option value="exposure">Exposure</option>
+            <option value="contrast">Contrast</option>
+            <option value="highlights">Highlights</option>
+            <option value="shadows">Shadows</option>
+            <option value="whites">Whites</option>
+            <option value="blacks">Blacks</option>
+            <option value="temp">Temperature</option>
+            <option value="tint">Tint</option>
+            <option value="vibrance">Vibrance</option>
+            <option value="saturation">Saturation</option>
+            <option value="texture">Texture</option>
+            <option value="clarity">Clarity</option>
+            <option value="dehaze">Dehaze</option>
+            <option value="vignette">Vignette</option>
+            <option value="grain">Grain</option>
+          </select>
+        </div>
+        <div class="control">
+          <label>Start · <span class="val" id="vampAnimStartVal">0</span></label>
+          <input type="number" id="vampAnimStart" value="0" step="1">
+        </div>
+        <div class="control">
+          <label>End · <span class="val" id="vampAnimEndVal">100</span></label>
+          <input type="number" id="vampAnimEnd" value="100" step="1">
+        </div>
+        <div class="control">
+          <label>Frames</label>
+          <input type="number" id="vampAnimFrames" min="2" max="60" value="24">
+        </div>
+        <div class="control">
+          <label>Speed (FPS) · <span class="val" id="vampAnimFpsVal">12</span></label>
+          <input type="range" id="vampAnimFps" min="1" max="30" value="12">
+        </div>
+        <div class="control">
+          <label>Order</label>
+          <select id="vampAnimOrder">
+            <option value="forward">Forward</option>
+            <option value="reverse">Reverse</option>
+            <option value="bounce">Bounce (back &amp; forth)</option>
+          </select>
+        </div>
+        <div class="control">
+          <button id="vampAnimRun" disabled>Generate animation</button>
+        </div>
+      </div>
+      <p class="hint" id="vampAnimHint">Sweeping <strong>Strength</strong> — 0 (original) to 100 (full
+        preset).</p>
+
+      <div class="canvas-wrap">
+        <div class="canvas-box">
+          <strong>Animation</strong>
+          <canvas id="vampAnimOut"></canvas>
+          <div class="row" style="justify-content:center">
+            <button class="ghost" id="vampAnimPlay" disabled>▶ Play</button>
+            <button class="dl" id="vampAnimVideo" disabled>⬇ Download video</button>
+            <button class="ghost" id="vampAnimFrame" disabled>⬇ Frame (PNG)</button>
+          </div>
+          <span class="hint" id="vampAnimStatus">Upload an image, then press “Generate animation”.</span>
+        </div>
+      </div>
+      <p class="hint">Frames are rendered one by one at a reduced size (long side ≤ 480&nbsp;px, up to 60
+        frames) so the page stays responsive and doesn't run out of memory. Grain uses a fixed seed so it
+        stays steady across the sweep. Video export uses <code>MediaRecorder</code> and prefers
+        <strong>MP4</strong>; if the browser can't record the canvas (e.g. some iOS) use “Frame (PNG)”.</p>
     </div>
   </section>
 </main>
@@ -1522,6 +1649,671 @@ function openImageInTab(blob){
     // Save the currently visible preview frame as PNG (iOS-safe via download()).
     download(aOut,sourceName+'_collage_frame.png');
   });
+})();
+
+/* ================================================================== */
+/*  VAMPIRE  (browser port of vampire_filter.py)                     */
+/* ================================================================== */
+(function(){
+  /* ---------------- core pipeline (mirrors vampire_filter.py) ----------------
+     Works on a flat Float32Array of interleaved RGB in [0,1] (length W*H*3).
+     Every stage matches the corresponding function in the Python script. */
+  const LR=0.2126, LG=0.7152, LB=0.0722;
+
+  // Seeded PRNG (mulberry32) + Box–Muller so grain is reproducible.
+  function mulberry32(a){
+    return function(){
+      a|=0; a=a+0x6D2B79F5|0;
+      let t=Math.imul(a^a>>>15,1|a);
+      t=t+Math.imul(t^t>>>7,61|t)^t;
+      return ((t^t>>>14)>>>0)/4294967296;
+    };
+  }
+  function makeGaussian(rand){
+    let spare=null;
+    return function(){
+      if(spare!==null){ const s=spare; spare=null; return s; }
+      let u,v,s;
+      do{ u=rand()*2-1; v=rand()*2-1; s=u*u+v*v; }while(s>=1||s===0);
+      const m=Math.sqrt(-2*Math.log(s)/s);
+      spare=v*m; return u*m;
+    };
+  }
+  function ss(x){ if(x<0)x=0; else if(x>1)x=1; return x*x*(3-2*x); }
+
+  function lumaPlane(img,n){
+    const L=new Float32Array(n);
+    for(let i=0,j=0;i<n;i++,j+=3) L[i]=LR*img[j]+LG*img[j+1]+LB*img[j+2];
+    return L;
+  }
+
+  // Separable box blur on a single plane (edge-clamped), O(1) per pixel.
+  function boxBlurPlane(src,w,h,r){
+    if(r<1) return src.slice(0);
+    const win=2*r+1;
+    const tmp=new Float32Array(w*h), out=new Float32Array(w*h);
+    for(let y=0;y<h;y++){
+      const row=y*w; let sum=0;
+      for(let k=-r;k<=r;k++){ const xx=k<0?0:(k>=w?w-1:k); sum+=src[row+xx]; }
+      for(let x=0;x<w;x++){
+        tmp[row+x]=sum/win;
+        const xo=x-r<0?0:x-r, xi=x+r+1>=w?w-1:x+r+1;
+        sum+=src[row+xi]-src[row+xo];
+      }
+    }
+    for(let x=0;x<w;x++){
+      let sum=0;
+      for(let k=-r;k<=r;k++){ const yy=k<0?0:(k>=h?h-1:k); sum+=tmp[yy*w+x]; }
+      for(let y=0;y<h;y++){
+        out[y*w+x]=sum/win;
+        const yo=y-r<0?0:y-r, yi=y+r+1>=h?h-1:y+r+1;
+        sum+=tmp[yi*w+x]-tmp[yo*w+x];
+      }
+    }
+    return out;
+  }
+  function gaussianBlurPlane(src,w,h,radius){
+    if(radius<=0.5) return src.slice(0);
+    const r=Math.max(1,Math.round(radius/3));
+    let out=src;
+    for(let i=0;i<3;i++) out=boxBlurPlane(out,w,h,r);
+    return out;
+  }
+  // Bilinear resize of a plane (used for grain noise upscaling).
+  function bilinearResize(src,sw,sh,dw,dh){
+    const out=new Float32Array(dw*dh);
+    const sxr=dw>1?(sw-1)/(dw-1):0, syr=dh>1?(sh-1)/(dh-1):0;
+    for(let y=0;y<dh;y++){
+      const fy=y*syr; let y0=fy|0; let y1=y0+1>=sh?sh-1:y0+1; const wy=fy-y0;
+      for(let x=0;x<dw;x++){
+        const fx=x*sxr; let x0=fx|0; let x1=x0+1>=sw?sw-1:x0+1; const wx=fx-x0;
+        const a=src[y0*sw+x0], b=src[y0*sw+x1], c=src[y1*sw+x0], d=src[y1*sw+x1];
+        out[y*dw+x]=a*(1-wx)*(1-wy)+b*wx*(1-wy)+c*(1-wx)*wy+d*wx*wy;
+      }
+    }
+    return out;
+  }
+
+  function hslToRgb(hDeg,s,l){
+    let h=(((hDeg%360)+360)%360)/60;
+    const c=(1-Math.abs(2*l-1))*s, x=c*(1-Math.abs(h%2-1)), m=l-c/2;
+    let r,g,b; const hi=Math.floor(h)%6;
+    if(hi===0){r=c;g=x;b=0;} else if(hi===1){r=x;g=c;b=0;}
+    else if(hi===2){r=0;g=c;b=x;} else if(hi===3){r=0;g=x;b=c;}
+    else if(hi===4){r=x;g=0;b=c;} else {r=c;g=0;b=x;}
+    return [r+m,g+m,b+m];
+  }
+
+  // Monotone cubic (PCHIP / Fritsch–Carlson) LUT from control points in 0..255.
+  function monotoneCurveLut(points,size){
+    size=size||1024;
+    const pts=points.slice().sort((a,b)=>a[0]-b[0]);
+    const n=pts.length;
+    const x=new Float64Array(n), y=new Float64Array(n);
+    for(let i=0;i<n;i++){ x[i]=pts[i][0]/255; y[i]=pts[i][1]/255; }
+    const delta=new Float64Array(n-1);
+    for(let i=0;i<n-1;i++) delta[i]=(y[i+1]-y[i])/(x[i+1]-x[i]);
+    const m=new Float64Array(n);
+    for(let i=1;i<n-1;i++) m[i]=(delta[i-1]+delta[i])/2;
+    m[0]=delta[0]; m[n-1]=delta[n-2];
+    for(let i=0;i<n-1;i++){
+      if(delta[i]===0){ m[i]=0; m[i+1]=0; }
+      else{
+        const a=m[i]/delta[i], b=m[i+1]/delta[i], t=a*a+b*b;
+        if(t>9){ const sf=3/Math.sqrt(t); m[i]=sf*a*delta[i]; m[i+1]=sf*b*delta[i]; }
+      }
+    }
+    const lut=new Float32Array(size);
+    for(let k=0;k<size;k++){
+      const xs=k/(size-1);
+      let lo=0,hi=n; while(lo<hi){ const mid=(lo+hi)>>1; if(x[mid]<xs) lo=mid+1; else hi=mid; }
+      let idx=lo-1; if(idx<0)idx=0; else if(idx>n-2)idx=n-2;
+      const dx=x[idx+1]-x[idx], t=(xs-x[idx])/dx, t2=t*t, t3=t2*t;
+      let v=(2*t3-3*t2+1)*y[idx]+(t3-2*t2+t)*dx*m[idx]
+           +(-2*t3+3*t2)*y[idx+1]+(t3-t2)*dx*m[idx+1];
+      lut[k]=v<0?0:(v>1?1:v);
+    }
+    return lut;
+  }
+
+  function clip01(img,n3){ for(let j=0;j<n3;j++){ const v=img[j]; if(v<0)img[j]=0; else if(v>1)img[j]=1; } }
+
+  /* ---- stages ---- */
+  function exposure(img,n3,ev){ const f=Math.pow(2,ev); for(let j=0;j<n3;j++) img[j]*=f; }
+
+  function toneRegions(img,n,hi,sh,wh,bl){
+    const H=hi/100*0.45, S=sh/100*0.35, W=wh/100*0.30, B=bl/100*0.25;
+    for(let i=0,j=0;i<n;i++,j+=3){
+      const L=LR*img[j]+LG*img[j+1]+LB*img[j+2];
+      const d=ss((L-0.45)/0.55)*H+ss((0.55-L)/0.55)*S+ss((L-0.65)/0.35)*W+ss((0.35-L)/0.35)*B;
+      img[j]+=d; img[j+1]+=d; img[j+2]+=d;
+    }
+  }
+  function contrast(img,n3,amount){
+    if(amount===0) return;
+    const a=amount/100, f=a>0?1+0.6*a:1+0.9*a;
+    for(let j=0;j<n3;j++) img[j]=(img[j]-0.5)*f+0.5;
+  }
+  function whiteBalance(img,n,n3,temp,tint){
+    const t=temp/100, g=tint/100, gr=1+0.22*t, gg=1-0.16*g, gb=1-0.22*t;
+    let before=0; for(let i=0,j=0;i<n;i++,j+=3) before+=LR*img[j]+LG*img[j+1]+LB*img[j+2];
+    let after=0;
+    for(let i=0,j=0;i<n;i++,j+=3){
+      const r=img[j]*gr, gv=img[j+1]*gg, b=img[j+2]*gb;
+      img[j]=r; img[j+1]=gv; img[j+2]=b; after+=LR*r+LG*gv+LB*b;
+    }
+    const ratio=(before/n)/Math.max(after/n,1e-6);
+    for(let j=0;j<n3;j++) img[j]*=ratio;
+  }
+  function dehaze(img,n,amount){
+    if(amount===0) return;
+    const a=amount/100, BINS=1024, hist=new Int32Array(BINS);
+    for(let i=0,j=0;i<n;i++,j+=3){
+      let mn=img[j]; if(img[j+1]<mn)mn=img[j+1]; if(img[j+2]<mn)mn=img[j+2];
+      let b=(mn*BINS)|0; if(b<0)b=0; else if(b>=BINS)b=BINS-1; hist[b]++;
+    }
+    const target=n*0.05; let cum=0, veil=0;
+    for(let b=0;b<BINS;b++){ cum+=hist[b]; if(cum>=target){ veil=(b+0.5)/BINS; break; } }
+    const av=a*veil, denom=Math.max(1-av,1e-3), f=1+0.3*a;
+    for(let i=0,j=0;i<n;i++,j+=3){
+      const r=(img[j]-av)/denom, gv=(img[j+1]-av)/denom, b=(img[j+2]-av)/denom;
+      const L=LR*r+LG*gv+LB*b;
+      img[j]=L+(r-L)*f; img[j+1]=L+(gv-L)*f; img[j+2]=L+(b-L)*f;
+    }
+  }
+  function localContrast(img,n,w,h,texture,clarity){
+    if(texture===0 && clarity===0) return;
+    const base=Math.max(w,h)/1000, L=lumaPlane(img,n);
+    if(texture!==0){
+      const blur=gaussianBlurPlane(L,w,h,Math.max(1.5,2.5*base)), k=texture/100*1.2;
+      for(let i=0,j=0;i<n;i++,j+=3){ const d=(L[i]-blur[i])*k; img[j]+=d; img[j+1]+=d; img[j+2]+=d; }
+    }
+    if(clarity!==0){
+      const blur=gaussianBlurPlane(L,w,h,Math.max(6,30*base)), k=clarity/100*1.5;
+      for(let i=0,j=0;i<n;i++,j+=3){
+        let Lc=L[i]; if(Lc<0)Lc=0; else if(Lc>1)Lc=1;
+        const a=2*Lc-1, mask=1-a*a;
+        const d=(L[i]-blur[i])*mask*k; img[j]+=d; img[j+1]+=d; img[j+2]+=d;
+      }
+    }
+  }
+  function vibranceSaturation(img,n,vibrance,sat){
+    const hasV=vibrance!==0, hasS=sat!==0; if(!hasV && !hasS) return;
+    const v=vibrance/100, s=sat/100, satMul=1+0.85*s;
+    for(let i=0,j=0;i<n;i++,j+=3){
+      const r=img[j],g=img[j+1],b=img[j+2], L=LR*r+LG*g+LB*b;
+      let mx=r; if(g>mx)mx=g; if(b>mx)mx=b;
+      let mn=r; if(g<mn)mn=g; if(b<mn)mn=b;
+      let cur=mx-mn; if(cur<0)cur=0; else if(cur>1)cur=1;
+      let f=1; if(hasV){ const c=1-cur; f+=v*0.9*c*c; } if(hasS) f*=satMul;
+      img[j]=L+(r-L)*f; img[j+1]=L+(g-L)*f; img[j+2]=L+(b-L)*f;
+    }
+  }
+  function colorGrading(img,n,p){
+    const blend=p.grade_blending/100;
+    const zones=[['shadows',p.grade_shadows,false],['midtones',p.grade_midtones,false],
+                 ['highlights',p.grade_highlights,false],['global',p.grade_global,true]];
+    const active=[];
+    for(const [name,vals,glob] of zones){
+      const hue=vals[0], sat=vals[1], lum=vals[2];
+      if(sat===0 && lum===0) continue;
+      const col=hslToRgb(hue,1,0.5), mean=(col[0]+col[1]+col[2])/3, sc=(sat/100)*0.28*blend;
+      active.push({name,glob,tint:[(col[0]-mean)*sc,(col[1]-mean)*sc,(col[2]-mean)*sc],lum:lum/100*0.2});
+    }
+    if(!active.length) return;
+    for(let i=0,j=0;i<n;i++,j+=3){
+      let L=LR*img[j]+LG*img[j+1]+LB*img[j+2]; if(L<0)L=0; else if(L>1)L=1;
+      let dr=0,dg=0,db=0;
+      for(const z of active){
+        let mask;
+        if(z.name==='shadows') mask=Math.pow(ss((0.5-L)/0.5),1.5);
+        else if(z.name==='midtones') mask=1-Math.pow(Math.abs(2*L-1),1.5);
+        else if(z.name==='highlights') mask=Math.pow(ss((L-0.5)/0.5),1.5);
+        else mask=1;
+        const wgt=mask*(z.glob?0.6:1);
+        dr+=wgt*z.tint[0]; dg+=wgt*z.tint[1]; db+=wgt*z.tint[2];
+        if(z.lum!==0){ const lv=wgt*z.lum; dr+=lv; dg+=lv; db+=lv; }
+      }
+      img[j]+=dr; img[j+1]+=dg; img[j+2]+=db;
+    }
+  }
+  function colorNoiseReduction(img,n,w,h,p){
+    if(p.color_noise<=0) return;
+    const L=lumaPlane(img,n);
+    const cr=new Float32Array(n), cg=new Float32Array(n), cb=new Float32Array(n);
+    for(let i=0,j=0;i<n;i++,j+=3){ cr[i]=img[j]-L[i]; cg[i]=img[j+1]-L[i]; cb[i]=img[j+2]-L[i]; }
+    let radius=(1+(p.color_noise/100)*6)*(0.5+p.color_noise_smooth/100);
+    const br=gaussianBlurPlane(cr,w,h,radius), bg=gaussianBlurPlane(cg,w,h,radius), bb=gaussianBlurPlane(cb,w,h,radius);
+    const keep=(p.color_noise_detail/100)*0.3, km=1-keep;
+    for(let i=0,j=0;i<n;i++,j+=3){
+      img[j]=L[i]+br[i]*km+cr[i]*keep;
+      img[j+1]=L[i]+bg[i]*km+cg[i]*keep;
+      img[j+2]=L[i]+bb[i]*km+cb[i]*keep;
+    }
+  }
+  function vignette(img,w,h,p){
+    if(p.vignette===0) return;
+    const r=p.vignette_roundness/100, ar=w/h;
+    const sx=ar>=1?1/(1+r*(ar-1)):1, sy=ar<1?1/(1+r*(1/ar-1)):1;
+    const mid=Math.min(Math.max(p.vignette_midpoint/100,0.05),1);
+    const feather=Math.max(p.vignette_feather/100,0.05), amount=p.vignette/100;
+    for(let y=0;y<h;y++){
+      const yy=(h>1?(-1+2*y/(h-1)):0)*sy;
+      for(let x=0;x<w;x++){
+        const xx=(w>1?(-1+2*x/(w-1)):0)*sx;
+        const t=ss((Math.sqrt(xx*xx+yy*yy)-mid)/feather);
+        const f=amount<0?1+amount*t:1+amount*t*0.8;
+        const j=(y*w+x)*3; img[j]*=f; img[j+1]*=f; img[j+2]*=f;
+      }
+    }
+  }
+  function grain(img,n,w,h,p,seed){
+    if(p.grain<=0) return;
+    const rand=mulberry32((seed==null?123456789:seed)>>>0), gauss=makeGaussian(rand);
+    const size=1+(p.grain_size/100)*4;
+    const nh=Math.max(2,Math.floor(h/size)), nw=Math.max(2,Math.floor(w/size));
+    const small=new Float32Array(nw*nh); for(let i=0;i<small.length;i++) small[i]=gauss();
+    let noise=bilinearResize(small,nw,nh,w,h);
+    const rough=p.grain_roughness/100;
+    if(rough>0){
+      const lh=Math.max(2,Math.floor(nh/6)), lw=Math.max(2,Math.floor(nw/6));
+      const low=new Float32Array(lw*lh); for(let i=0;i<low.length;i++) low[i]=gauss();
+      const lowUp=bilinearResize(low,lw,lh,w,h);
+      for(let i=0;i<noise.length;i++) noise[i]*=(1+rough*0.8*lowUp[i]);
+    }
+    const amount=(p.grain/100)*0.12;
+    for(let i=0,j=0;i<n;i++,j+=3){
+      let L=LR*img[j]+LG*img[j+1]+LB*img[j+2]; if(L<0)L=0; else if(L>1)L=1;
+      const d=noise[i]*amount*Math.sqrt(1-Math.abs(2*L-1));
+      img[j]+=d; img[j+1]+=d; img[j+2]+=d;
+    }
+  }
+
+  // Full chain — returns a new Float32Array (RGB, [0,1]).
+  function process(img0,w,h,p){
+    const n=w*h, n3=n*3, img=img0.slice(0);
+    const original=p.strength<1?img0:null;
+    exposure(img,n3,p.exposure);
+    toneRegions(img,n,p.highlights,p.shadows,p.whites,p.blacks);
+    contrast(img,n3,p.contrast);
+    clip01(img,n3);
+    whiteBalance(img,n,n3,p.temp,p.tint);
+    clip01(img,n3);
+    dehaze(img,n,p.dehaze);
+    localContrast(img,n,w,h,p.texture,p.clarity);
+    clip01(img,n3);
+    applyLutInPlace(img,n3,monotoneCurveLut(p.curve,1024));
+    vibranceSaturation(img,n,p.vibrance,p.saturation);
+    clip01(img,n3);
+    colorGrading(img,n,p);
+    clip01(img,n3);
+    colorNoiseReduction(img,n,w,h,p);
+    if(p.vignetteOn) vignette(img,w,h,p);
+    if(p.grainOn) grain(img,n,w,h,p,p.seed);
+    clip01(img,n3);
+    if(original){
+      const s=p.strength, is=1-s;
+      for(let j=0;j<n3;j++) img[j]=original[j]*is+img[j]*s;
+      clip01(img,n3);
+    }
+    return img;
+  }
+  function applyLutInPlace(img,n3,lut){
+    const last=lut.length-1;
+    for(let j=0;j<n3;j++){
+      let v=img[j]; if(v<0)v=0; else if(v>1)v=1;
+      const xf=v*last; let i0=xf|0; if(i0>last)i0=last; let i1=i0+1>last?last:i0+1;
+      const f=xf-i0; img[j]=lut[i0]*(1-f)+lut[i1]*f;
+    }
+  }
+
+  /* ---- ImageData <-> RGB float ---- */
+  function toRgb(id){
+    const d=id.data, n=id.width*id.height, img=new Float32Array(n*3);
+    for(let i=0,j=0,k=0;i<n;i++,j+=4,k+=3){ img[k]=d[j]/255; img[k+1]=d[j+1]/255; img[k+2]=d[j+2]/255; }
+    return img;
+  }
+  function toImageData(img,w,h,src){
+    const id=new ImageData(w,h), d=id.data, sd=src?src.data:null, n=w*h;
+    for(let i=0,j=0,k=0;i<n;i++,j+=4,k+=3){
+      d[j]=img[k]*255; d[j+1]=img[k+1]*255; d[j+2]=img[k+2]*255;
+      d[j+3]=sd?sd[j+3]:255;
+    }
+    return id;
+  }
+
+  function defaultPreset(){
+    return {
+      exposure:-0.79, contrast:53, highlights:-100, shadows:-27, whites:-100, blacks:-55,
+      temp:100, tint:-10, vibrance:24, saturation:100,
+      texture:-10, clarity:15, dehaze:10,
+      vignette:-45, vignette_midpoint:64, vignette_roundness:15, vignette_feather:50,
+      grain:48, grain_size:34, grain_roughness:46,
+      color_noise:21, color_noise_detail:50, color_noise_smooth:50,
+      curve:[[0,0],[74,85],[184,135],[255,230]],
+      grade_shadows:[0,0,0], grade_midtones:[35,80,0], grade_highlights:[8,85,0], grade_global:[5,85,0],
+      grade_blending:50,
+      strength:1, grainOn:true, vignetteOn:true, seed:12345
+    };
+  }
+
+  /* ================= UI ================= */
+  const MAX_STATIC_DIM=2000;   // cap on the long side of the processed image
+  const ANIM_MAX_SIDE=480;     // long side of each animation frame
+  const ANIM_MAX_FRAMES=60;
+
+  // Slider groups. `scale` (optional) maps the slider value -> preset value.
+  const GROUPS=[
+    {title:'Light',   items:[
+      {key:'exposure',label:'Exposure',min:-2,max:2,step:0.01,dp:2},
+      {key:'contrast',label:'Contrast',min:-100,max:100,step:1},
+      {key:'highlights',label:'Highlights',min:-100,max:100,step:1},
+      {key:'shadows',label:'Shadows',min:-100,max:100,step:1},
+      {key:'whites',label:'Whites',min:-100,max:100,step:1},
+      {key:'blacks',label:'Blacks',min:-100,max:100,step:1},
+    ]},
+    {title:'Color',   items:[
+      {key:'temp',label:'Temp',min:-100,max:100,step:1},
+      {key:'tint',label:'Tint',min:-100,max:100,step:1},
+      {key:'vibrance',label:'Vibrance',min:-100,max:100,step:1},
+      {key:'saturation',label:'Saturation',min:-100,max:100,step:1},
+    ]},
+    {title:'Effects', items:[
+      {key:'texture',label:'Texture',min:-100,max:100,step:1},
+      {key:'clarity',label:'Clarity',min:-100,max:100,step:1},
+      {key:'dehaze',label:'Dehaze',min:-100,max:100,step:1},
+    ]},
+    {title:'Vignette',items:[
+      {key:'vignette',label:'Amount',min:-100,max:100,step:1},
+      {key:'vignette_midpoint',label:'Midpoint',min:0,max:100,step:1},
+      {key:'vignette_roundness',label:'Roundness',min:-100,max:100,step:1},
+      {key:'vignette_feather',label:'Feather',min:0,max:100,step:1},
+    ]},
+    {title:'Grain',   items:[
+      {key:'grain',label:'Amount',min:0,max:100,step:1},
+      {key:'grain_size',label:'Size',min:0,max:100,step:1},
+      {key:'grain_roughness',label:'Roughness',min:0,max:100,step:1},
+    ]},
+    {title:'Overall', items:[
+      {key:'strength',label:'Strength',min:0,max:100,step:1,suffix:'%',scale:0.01},
+    ]},
+  ];
+  // Per-parameter metadata for the animation defaults/hints.
+  const PARAM_META={
+    strength:{min:0,max:100,start:0,end:100,note:'0 (original) to 100 (full preset)'},
+    exposure:{min:-3,max:3,start:-1,end:1,note:'stops'},
+    contrast:{min:-100,max:100,start:0,end:80},
+    highlights:{min:-100,max:100,start:0,end:-100},
+    shadows:{min:-100,max:100,start:0,end:-50},
+    whites:{min:-100,max:100,start:0,end:-100},
+    blacks:{min:-100,max:100,start:0,end:-80},
+    temp:{min:-100,max:100,start:-100,end:100,note:'cold → warm'},
+    tint:{min:-100,max:100,start:-50,end:50},
+    vibrance:{min:-100,max:100,start:0,end:100},
+    saturation:{min:-100,max:100,start:-100,end:100},
+    texture:{min:-100,max:100,start:-100,end:100},
+    clarity:{min:-100,max:100,start:0,end:100},
+    dehaze:{min:-100,max:100,start:0,end:100},
+    vignette:{min:-100,max:100,start:0,end:-100},
+    grain:{min:0,max:100,start:0,end:100},
+  };
+
+  const fileInput=document.getElementById('vampFile');
+  const resetBtn=document.getElementById('vampReset');
+  const controlsBox=document.getElementById('vampControls');
+  const applyBtn=document.getElementById('vampApply');
+  const grainChk=document.getElementById('vampGrain');
+  const vignChk=document.getElementById('vampVign');
+  const statusEl=document.getElementById('vampStatus');
+  const inCanvas=document.getElementById('vampIn');
+  const outCanvas=document.getElementById('vampOut');
+  const dlBtn=document.getElementById('vampDl');
+
+  const inputs={}, valSpans={};
+  const DEFAULTS=defaultPreset();
+
+  // Build the slider controls from GROUPS.
+  GROUPS.forEach(group=>{
+    const head=document.createElement('div');
+    head.className='subhead'; head.textContent=group.title;
+    controlsBox.appendChild(head);
+    group.items.forEach(it=>{
+      const def=(it.key==='strength')?100:DEFAULTS[it.key];
+      const wrap=document.createElement('div'); wrap.className='control';
+      const label=document.createElement('label');
+      const val=document.createElement('span'); val.className='val';
+      val.textContent=fmt(it,def);
+      label.textContent=it.label+' · '; label.appendChild(val);
+      const input=document.createElement('input');
+      input.type='range'; input.min=it.min; input.max=it.max; input.step=it.step; input.value=def;
+      input.addEventListener('input',()=>{ val.textContent=fmt(it,parseFloat(input.value)); });
+      wrap.appendChild(label); wrap.appendChild(input);
+      controlsBox.appendChild(wrap);
+      inputs[it.key]=input; valSpans[it.key]=val;
+      input._meta=it;
+    });
+  });
+  function fmt(it,v){
+    if(it.dp!=null) return v.toFixed(it.dp);
+    return (Math.round(v))+(it.suffix||'');
+  }
+  function readPreset(){
+    const p=defaultPreset();
+    for(const key in inputs){
+      const it=inputs[key]._meta; let v=parseFloat(inputs[key].value);
+      if(it.scale) v*=it.scale;
+      p[key]=v;
+    }
+    p.grainOn=grainChk.checked; p.vignetteOn=vignChk.checked; p.seed=12345;
+    return p;
+  }
+  function resetPreset(){
+    GROUPS.forEach(g=>g.items.forEach(it=>{
+      const def=(it.key==='strength')?100:DEFAULTS[it.key];
+      inputs[it.key].value=def; valSpans[it.key].textContent=fmt(it,def);
+    }));
+    grainChk.checked=true; vignChk.checked=true;
+  }
+
+  /* ---- shared source ---- */
+  let sourceImage=null, sourceName='image';
+  let baseData=null, baseRgb=null, W=0, H=0;
+
+  function scaleCanvas(img,maxSide){
+    const scale=Math.min(1,maxSide/Math.max(img.width,img.height));
+    const w=Math.max(1,Math.round(img.width*scale)), h=Math.max(1,Math.round(img.height*scale));
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    return c;
+  }
+
+  fileInput.addEventListener('change',async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    sourceName=(f.name||'image').replace(/\.[^.]+$/,'')||'image';
+    sourceImage=await loadImage(f);
+    const c=scaleCanvas(sourceImage,MAX_STATIC_DIM);
+    W=c.width; H=c.height;
+    inCanvas.width=W; inCanvas.height=H;
+    inCanvas.getContext('2d').drawImage(c,0,0);
+    baseData=inCanvas.getContext('2d').getImageData(0,0,W,H);
+    baseRgb=toRgb(baseData);
+    outCanvas.width=W; outCanvas.height=H;
+    resetBtn.disabled=false; applyBtn.disabled=false; animRun.disabled=false;
+    resetAnim();
+    apply();  // show the vampire look immediately
+  });
+
+  function apply(){
+    if(!baseRgb) return;
+    applyBtn.disabled=true; statusEl.textContent='Processing…';
+    setTimeout(()=>{  // let the status paint before the heavy synchronous work
+      const p=readPreset();
+      const out=process(baseRgb,W,H,p);
+      outCanvas.getContext('2d').putImageData(toImageData(out,W,H,baseData),0,0);
+      dlBtn.disabled=false; applyBtn.disabled=false;
+      statusEl.textContent=`Applied · ${W}×${H}`;
+    },30);
+  }
+  applyBtn.addEventListener('click',apply);
+  resetBtn.addEventListener('click',()=>{ resetPreset(); apply(); });
+  // Re-apply automatically when a slider is released or a toggle flips.
+  Object.values(inputs).forEach(inp=>inp.addEventListener('change',()=>{ if(baseRgb) apply(); }));
+  [grainChk,vignChk].forEach(el=>el.addEventListener('change',()=>{ if(baseRgb) apply(); }));
+  dlBtn.addEventListener('click',()=>download(outCanvas,sourceName+'_vampire.png'));
+
+  /* ================= ANIMATION ================= */
+  const animParam=document.getElementById('vampAnimParam');
+  const animStart=document.getElementById('vampAnimStart');
+  const animEnd=document.getElementById('vampAnimEnd');
+  const animStartVal=document.getElementById('vampAnimStartVal');
+  const animEndVal=document.getElementById('vampAnimEndVal');
+  const animFrames=document.getElementById('vampAnimFrames');
+  const animFps=document.getElementById('vampAnimFps');
+  const animFpsVal=document.getElementById('vampAnimFpsVal');
+  const animOrder=document.getElementById('vampAnimOrder');
+  const animRun=document.getElementById('vampAnimRun');
+  const animHint=document.getElementById('vampAnimHint');
+  const animOut=document.getElementById('vampAnimOut');
+  const animPlay=document.getElementById('vampAnimPlay');
+  const animVideo=document.getElementById('vampAnimVideo');
+  const animFrame=document.getElementById('vampAnimFrame');
+  const animStatus=document.getElementById('vampAnimStatus');
+
+  let frames=[], seq=[], seqPos=0, playing=false, timer=null, recording=false;
+
+  function paramLabel(){ return animParam.options[animParam.selectedIndex].textContent; }
+  function syncParamDefaults(){
+    const meta=PARAM_META[animParam.value]||{start:0,end:100};
+    animStart.value=meta.start; animEnd.value=meta.end;
+    animStartVal.textContent=meta.start; animEndVal.textContent=meta.end;
+    const note=meta.note?` (${meta.note})`:'';
+    animHint.innerHTML='Sweeping <strong>'+paramLabel()+'</strong> — '+meta.start+' to '+meta.end+note+'.';
+  }
+  animParam.addEventListener('change',()=>{ syncParamDefaults(); invalidate(); });
+  animStart.addEventListener('input',()=>{ animStartVal.textContent=animStart.value; });
+  animEnd.addEventListener('input',()=>{ animEndVal.textContent=animEnd.value; });
+  animFps.addEventListener('input',()=>{ animFpsVal.textContent=animFps.value; if(playing) startTimer(); });
+  [animStart,animEnd,animFrames,animOrder].forEach(el=>el.addEventListener('change',invalidate));
+
+  function invalidate(){
+    if(frames.length){ resetAnim(); animStatus.textContent='Settings changed — press “Generate animation”.'; }
+  }
+  function resetAnim(){
+    pause(); frames=[]; seq=[]; seqPos=0;
+    animPlay.disabled=true; animVideo.disabled=true; animFrame.disabled=true;
+    animPlay.textContent='▶ Play';
+    animStatus.textContent = sourceImage ? 'Press “Generate animation”.'
+      : 'Upload an image, then press “Generate animation”.';
+    if(animOut.width) animOut.getContext('2d').clearRect(0,0,animOut.width,animOut.height);
+  }
+  function buildSeq(){
+    seq=frames.map((_,i)=>i);
+    if(animOrder.value==='reverse') seq.reverse();
+    else if(animOrder.value==='bounce' && frames.length>2){
+      for(let i=frames.length-2;i>=1;i--) seq.push(i);
+    }
+  }
+  function drawAt(pos){
+    if(!frames.length) return;
+    const fi=seq[((pos%seq.length)+seq.length)%seq.length];
+    animOut.getContext('2d').drawImage(frames[fi],0,0);
+  }
+  function startTimer(){
+    if(timer){ clearInterval(timer); timer=null; }
+    const fps=Math.max(1,parseInt(animFps.value,10)||12);
+    timer=setInterval(()=>{ drawAt(seqPos); seqPos=(seqPos+1)%seq.length; },1000/fps);
+  }
+  function play(){ if(playing||!frames.length) return; playing=true; animPlay.textContent='⏸ Pause'; startTimer(); }
+  function pause(){ playing=false; animPlay.textContent='▶ Play'; if(timer){ clearInterval(timer); timer=null; } }
+  animPlay.addEventListener('click',()=>{ playing?pause():play(); });
+
+  animRun.addEventListener('click',()=>{
+    if(!sourceImage) return;
+    pause();
+    const c=scaleCanvas(sourceImage,ANIM_MAX_SIDE);
+    const aw=c.width, ah=c.height;
+    const ad=c.getContext('2d').getImageData(0,0,aw,ah);
+    const argb=toRgb(ad);
+    const basePreset=readPreset();
+    const key=animParam.value;
+    const start=parseFloat(animStart.value)||0, end=parseFloat(animEnd.value)||0;
+    let count=parseInt(animFrames.value,10)||24;
+    count=Math.max(2,Math.min(ANIM_MAX_FRAMES,count));
+    // Value list, then apply order for playback (handled in buildSeq).
+    const values=[];
+    for(let i=0;i<count;i++){ const t=i/(count-1); values.push(start+(end-start)*t); }
+
+    frames=[]; animRun.disabled=true; animPlay.disabled=true;
+    animVideo.disabled=true; animFrame.disabled=true;
+    animOut.width=aw; animOut.height=ah;
+
+    let i=0;
+    function step(){
+      if(i>=values.length){ finishGen(); return; }
+      const p=Object.assign({},basePreset);
+      if(key==='strength') p.strength=values[i]/100; else p[key]=values[i];
+      const out=process(argb,aw,ah,p);
+      const fc=document.createElement('canvas'); fc.width=aw; fc.height=ah;
+      fc.getContext('2d').putImageData(toImageData(out,aw,ah,ad),0,0);
+      frames.push(fc);
+      i++;
+      animStatus.textContent=`Rendering frame ${i}/${values.length}…`;
+      setTimeout(step,0);  // yield so the UI stays responsive
+    }
+    function finishGen(){
+      buildSeq(); seqPos=0; drawAt(0);
+      animRun.disabled=false; animPlay.disabled=false; animFrame.disabled=false;
+      const vtype=pickVideoType();
+      animVideo.disabled=!vtype;
+      animVideo.textContent=vtype?`⬇ Download video (${vtype.ext.toUpperCase()})`:'⬇ Download video';
+      animStatus.textContent=`${frames.length} frames · ${aw}×${ah} · ${paramLabel()} ${start}→${end}`;
+      play();
+    }
+    step();
+  });
+
+  /* ---- video export (MediaRecorder over the preview canvas) ---- */
+  function pickVideoType(){
+    if(typeof MediaRecorder==='undefined' || typeof animOut.captureStream!=='function') return null;
+    const mp4=['video/mp4;codecs=avc1.42E01E','video/mp4;codecs=avc1.4d002a','video/mp4;codecs=avc1','video/mp4;codecs=h264'];
+    const webm=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+    for(const m of mp4)  if(MediaRecorder.isTypeSupported(m)) return {mime:m, ext:'mp4'};
+    for(const m of webm) if(MediaRecorder.isTypeSupported(m)) return {mime:m, ext:'webm'};
+    return null;
+  }
+  animVideo.addEventListener('click',()=>{
+    if(!frames.length||recording) return;
+    const vtype=pickVideoType();
+    if(!vtype){ alert('Your browser can\'t record video. Use “Frame (PNG)”.'); return; }
+    pause();
+    const fps=Math.max(1,parseInt(animFps.value,10)||12);
+    let stream, rec;
+    try{ stream=animOut.captureStream(fps); rec=new MediaRecorder(stream,{mimeType:vtype.mime}); }
+    catch(err){ alert('Couldn\'t start recording: '+err.message); play(); return; }
+    const chunks=[];
+    rec.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop=()=>{
+      recording=false; animVideo.disabled=false;
+      animVideo.textContent=`⬇ Download video (${vtype.ext.toUpperCase()})`;
+      const blob=new Blob(chunks,{type:vtype.mime}), url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download=`${sourceName}_vampire_anim.${vtype.ext}`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+      animStatus.textContent=`${vtype.ext.toUpperCase()} downloaded · ${frames.length} frames.`;
+      play();
+    };
+    recording=true; animVideo.disabled=true; animVideo.textContent='Recording…';
+    const frameMs=1000/fps;
+    rec.start();
+    let pos=0;
+    const iv=setInterval(()=>{
+      drawAt(pos); pos++;
+      if(pos>=seq.length){ clearInterval(iv); setTimeout(()=>{ try{rec.stop();}catch(_){} }, frameMs+40); }
+    },frameMs);
+  });
+  animFrame.addEventListener('click',()=>download(animOut,sourceName+'_vampire_frame.png'));
+
+  syncParamDefaults();
 })();
 </script>
 </body>

@@ -96,6 +96,44 @@ Hay dos secciones:
   permite guardar el **cuadro visible como PNG** para navegadores sin grabación de
   canvas (p. ej. algunos iOS).
 
+### 6. 🧛 Vampire
+Port al navegador del script [`vampire_filter.py`](vampire_filter.py): un preset tipo
+**Lightroom Mobile** («vampire») que aplica toda una cadena de revelado — exposición,
+altas luces / sombras / blancos / negros, balance de blancos cálido, contraste, dehaze,
+textura y claridad, curva de tonos, intensidad y saturación, mezcla de color
+(rojo/naranja), reducción de ruido de color, **viñeta** y **grano** de película. Todo
+corre localmente en el navegador; el port de JavaScript reproduce el resultado de Python
+con una diferencia inapreciable (< 0,03 de un nivel 0–255).
+
+Hay dos secciones:
+- **Vampire Filter:** los controles vienen precargados con los valores del preset,
+  agrupados en **Luz**, **Color**, **Efectos**, **Viñeta**, **Grano** y **General**
+  (intensidad global 0–100 %). Interruptores para activar/desactivar **grano** y
+  **viñeta**. Ajusta y pulsa **Apply** (también se re-aplica al soltar un deslizador).
+  Las imágenes muy grandes se procesan hasta 2000 px en el lado largo para mantener el
+  navegador ágil.
+- **Vampire Animación:** anima **un parámetro** (Strength, Exposición, Temperatura,
+  Saturación, Viñeta, Grano, etc.) desde un valor de **inicio** hasta uno de **fin** a lo
+  largo de un número de **cuadros**, y lo reproduce a los **FPS** elegidos. El resto de
+  controles conserva los valores del filtro, así que puedes, por ejemplo, revelar el
+  efecto animando *Strength* de 0 → 100. Orden **forward**, **reverse** o **bounce**.
+  Los cuadros se renderizan de uno en uno a tamaño reducido (lado largo ≤ 480 px, hasta
+  60 cuadros); el grano usa una semilla fija para no parpadear. Exporta a **vídeo**
+  (`MediaRecorder`, prefiriendo MP4) o guarda el **cuadro visible como PNG**.
+
+## Script de Python: filtro vampire
+
+`vampire_filter.py` aplica el preset «vampire» a una imagen o a una carpeta (lote).
+
+```bash
+python vampire_filter.py entrada.jpg -o salida.jpg
+python vampire_filter.py entrada.jpg -o salida.jpg --strength 0.7
+python vampire_filter.py carpeta/ -o salida/          # lote
+```
+
+Opciones: `--strength 0..1`, `--no-grain`, `--no-vignette`, `--seed`, `--quality`.
+Requiere `numpy` y `pillow`.
+
 ## Script de Python: relleno combinado
 
 `combined_fill.py` implementa la combinación de relleno horizontal + vertical
@@ -127,6 +165,7 @@ docs/index.html      → aplicación web (se publica en GitHub Pages)
 docs/vendor/         → gif.js (codificación de GIF para la animación del collage)
 combined_fill.py     → script de relleno combinado horizontal + vertical
 live_collage.py      → collage 4-way en vivo desde la webcam (OpenCV)
+vampire_filter.py    → preset «vampire» tipo Lightroom (numpy + pillow)
 *.ipynb              → cuadernos originales con los algoritmos
     4waycollage*.ipynb, collage_mix.ipynb → algoritmo del 4-Way Collage
 .github/workflows/   → workflow que publica docs/ en GitHub Pages
