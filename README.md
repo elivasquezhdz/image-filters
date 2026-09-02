@@ -121,6 +121,25 @@ Hay dos secciones:
   60 cuadros); el grano usa una semilla fija para no parpadear. Exporta a **vídeo**
   (`MediaRecorder`, prefiriendo MP4) o guarda el **cuadro visible como PNG**.
 
+### 7. 🎬 Slideshow
+Selecciona **hasta 10 imágenes** y crea un **vídeo** con ellas: cada imagen es un cuadro
+que se reproduce en el orden elegido a los **FPS** indicados. Todo corre localmente en el
+navegador.
+
+Parámetros:
+- **Velocidad (FPS):** cuadros por segundo (1–30).
+- **Ajuste (Fit):** *Contain* (encaja la imagen completa con bordes) o *Cover* (rellena el
+  cuadro recortando). Los cuadros toman el tamaño de la primera imagen (limitado a 1280 px
+  en el lado largo, con dimensiones pares para los codificadores).
+- **Bucle «ida y vuelta» (bounce):** reproduce las imágenes hacia delante y luego hacia
+  atrás para un ciclo continuo.
+
+Exportación:
+- **Vídeo:** graba la reproducción con `MediaRecorder`, prefiriendo **MP4** (H.264) por su
+  compatibilidad al compartir; si el navegador no puede grabar MP4 usa WebM.
+- **Cuadro (PNG):** guarda el fotograma visible (útil en navegadores sin soporte de
+  grabación de canvas, p. ej. algunos iOS).
+
 ## Script de Python: filtro vampire
 
 `vampire_filter.py` aplica el preset «vampire» a una imagen o a una carpeta (lote).
