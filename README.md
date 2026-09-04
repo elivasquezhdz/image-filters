@@ -151,7 +151,11 @@ Parámetros:
 - **Operación:** por ahora **invertir colores** sobre la zona seleccionada (más adelante se
   podrán añadir otras operaciones).
 - **Umbral de máscara (threshold):** cuánta parte de la máscara suave cuenta como «persona».
-- **Ver máscara (Show mask):** previsualiza la región detectada (blanco = persona).
+- **Crecer / encoger (grow / shrink):** dilata (+) o erosiona (−) la máscara en píxeles para
+  cubrir zonas que el modelo se dejó o recortar lo que sobra.
+- **Suavizar bordes (smooth edges):** difumina el borde de la máscara para que el recorte se
+  vea redondeado en lugar de dentado (mezcla suave entre original e invertido).
+- **Ver máscara (Show mask):** previsualiza la máscara refinada (blanco = zona seleccionada).
 
 El modelo (~6 MB) se descarga solo la **primera vez** que se usa esta pestaña. Requiere un
 navegador con **WebAssembly SIMD** (todos los navegadores actuales). Las imágenes grandes se
