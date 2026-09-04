@@ -140,6 +140,23 @@ Exportación:
 - **Cuadro (PNG):** guarda el fotograma visible (útil en navegadores sin soporte de
   grabación de canvas, p. ej. algunos iOS).
 
+### 8. 🧍 Person / Background
+Detecta a la **persona** en una foto con un modelo de segmentación que corre **en el
+navegador** ([MediaPipe Selfie Segmentation](https://google.github.io/mediapipe/solutions/selfie_segmentation),
+alojado localmente en `docs/vendor/selfie/`) y permite operar sobre la **persona** o sobre
+el **fondo**. La imagen nunca se sube a ningún servidor.
+
+Parámetros:
+- **Operar sobre (Operate on):** `person` o `background`.
+- **Operación:** por ahora **invertir colores** sobre la zona seleccionada (más adelante se
+  podrán añadir otras operaciones).
+- **Umbral de máscara (threshold):** cuánta parte de la máscara suave cuenta como «persona».
+- **Ver máscara (Show mask):** previsualiza la región detectada (blanco = persona).
+
+El modelo (~6 MB) se descarga solo la **primera vez** que se usa esta pestaña. Requiere un
+navegador con **WebAssembly SIMD** (todos los navegadores actuales). Las imágenes grandes se
+procesan hasta 1600 px en el lado largo.
+
 ## Script de Python: filtro vampire
 
 `vampire_filter.py` aplica el preset «vampire» a una imagen o a una carpeta (lote).
@@ -181,7 +198,8 @@ Requiere `opencv-python` (o `opencv-python-headless`) y `numpy`.
 
 ```
 docs/index.html      → aplicación web (se publica en GitHub Pages)
-docs/vendor/         → gif.js (codificación de GIF para la animación del collage)
+docs/vendor/         → gif.js (GIF del collage) y selfie/ (MediaPipe Selfie
+                       Segmentation, modelo de persona/fondo alojado localmente)
 combined_fill.py     → script de relleno combinado horizontal + vertical
 live_collage.py      → collage 4-way en vivo desde la webcam (OpenCV)
 vampire_filter.py    → preset «vampire» tipo Lightroom (numpy + pillow)

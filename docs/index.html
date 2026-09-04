@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Image Filters — Boxes · Animation · Fill · Chroma Shift · Collage · Vampire · Slideshow</title>
+<title>Image Filters — Boxes · Animation · Fill · Chroma Shift · Collage · Vampire · Slideshow · Person</title>
 <style>
   :root{
     --bg:#0f1115;
@@ -161,6 +161,7 @@
   <button class="tab" data-view="collage">🪞 4-Way Collage</button>
   <button class="tab" data-view="vampire">🧛 Vampire</button>
   <button class="tab" data-view="slideshow">🎬 Slideshow</button>
+  <button class="tab" data-view="person">🧍 Person / Background</button>
 </div>
 
 <main>
@@ -774,6 +775,70 @@
         <strong>Fit</strong> setting. Video export uses <code>MediaRecorder</code> and prefers
         <strong>MP4</strong> (more compatible when sharing); if the browser can't record MP4 it uses WebM,
         and if it can't record the canvas (e.g. some iOS) use “Frame (PNG)” to save the visible frame.</p>
+    </div>
+  </section>
+
+  <!-- ================= PERSON / BACKGROUND ================= -->
+  <section class="view" id="view-person">
+    <div class="card">
+      <h2>Person / Background <span class="badge">1 image</span></h2>
+      <p class="desc">Detects the <strong>person</strong> in a photo with an on-device segmentation model
+        (<a href="https://google.github.io/mediapipe/solutions/selfie_segmentation" target="_blank"
+        rel="noopener">MediaPipe Selfie Segmentation</a>), then lets you operate on either the
+        <strong>person</strong> or the <strong>background</strong>. For now the operation is
+        <strong>invert colors</strong> on whichever you choose. The model runs entirely in your browser —
+        your image is never uploaded.</p>
+
+      <div class="filebar">
+        <input type="file" id="personFile" accept="image/*">
+        <span class="hint">Pick a single photo containing a person.</span>
+      </div>
+
+      <div class="controls">
+        <div class="control">
+          <label>Operate on</label>
+          <select id="personTarget">
+            <option value="person">Person</option>
+            <option value="background">Background</option>
+          </select>
+        </div>
+        <div class="control">
+          <label>Operation</label>
+          <select id="personOp">
+            <option value="invert">Invert colors</option>
+          </select>
+        </div>
+        <div class="control">
+          <label>Mask threshold · <span class="val" id="personThrVal">0.50</span></label>
+          <input type="range" id="personThr" min="0" max="1" step="0.01" value="0.5">
+        </div>
+        <div class="control">
+          <label>Preview</label>
+          <div class="switch" style="height:38px">
+            <input type="checkbox" id="personShowMask">
+            <label for="personShowMask" style="text-transform:none;color:var(--text)">Show mask</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <div class="canvas-box">
+          <strong>Original</strong>
+          <canvas id="personIn"></canvas>
+        </div>
+        <div class="canvas-box">
+          <strong>Result</strong>
+          <canvas id="personOut"></canvas>
+          <button class="dl" id="personDl" disabled>⬇ Download</button>
+        </div>
+      </div>
+      <p class="hint status" id="personStatus">Upload a photo to start — the model (~6&nbsp;MB) loads on
+        first use.</p>
+      <p class="hint">Uses MediaPipe Selfie Segmentation, self-hosted under <code>vendor/selfie/</code> and
+        loaded only when you first use this tab. Needs a browser with WebAssembly SIMD (all current
+        browsers). Large images are processed at up to 1600&nbsp;px on the long side. The
+        <strong>threshold</strong> sets how much of the soft mask counts as “person”; <strong>Show mask</strong>
+        previews the detected region (white = person).</p>
     </div>
   </section>
 </main>
@@ -2558,6 +2623,129 @@ function openImageInTab(blob){
   });
 
   frameBtn.addEventListener('click',()=>download(outCanvas,'slideshow_frame.png'));
+})();
+
+/* ================================================================== */
+/*  PERSON / BACKGROUND  (MediaPipe Selfie Segmentation)             */
+/* ================================================================== */
+(function(){
+  const fileInput=document.getElementById('personFile');
+  const targetSel=document.getElementById('personTarget');
+  const opSel=document.getElementById('personOp');
+  const thr=document.getElementById('personThr');
+  const thrVal=document.getElementById('personThrVal');
+  const showMask=document.getElementById('personShowMask');
+  const inCanvas=document.getElementById('personIn');
+  const outCanvas=document.getElementById('personOut');
+  const dlBtn=document.getElementById('personDl');
+  const status=document.getElementById('personStatus');
+
+  const MAX_DIM=1600;      // cap on the long side of the processed image
+  const VENDOR='vendor/selfie/';
+  let seg=null, loading=null, pendingResolve=null;
+  let baseData=null, W=0, H=0, mask=null;   // mask: Float32Array W*H, 1 = person
+  let sourceName='image', busy=false;
+
+  thrVal.textContent=parseFloat(thr.value).toFixed(2);
+  thr.addEventListener('input',()=>{ thrVal.textContent=parseFloat(thr.value).toFixed(2); if(mask) renderResult(); });
+  targetSel.addEventListener('change',()=>{ if(mask) renderResult(); });
+  opSel.addEventListener('change',()=>{ if(mask) renderResult(); });
+  showMask.addEventListener('change',()=>{ if(mask) renderResult(); });
+
+  function loadScript(src){
+    return new Promise((res,rej)=>{
+      const s=document.createElement('script'); s.src=src; s.async=true;
+      s.onload=res; s.onerror=()=>rej(new Error('failed to load '+src));
+      document.head.appendChild(s);
+    });
+  }
+  // Lazy-load the MediaPipe runtime + model only on first use.
+  function ensureModel(){
+    if(seg) return Promise.resolve(seg);
+    if(loading) return loading;
+    loading=(async()=>{
+      if(typeof SelfieSegmentation==='undefined') await loadScript(VENDOR+'selfie_segmentation.js');
+      const s=new SelfieSegmentation({locateFile:f=>VENDOR+f});
+      s.setOptions({modelSelection:0});   // 0 = general model (better for whole-body photos)
+      s.onResults(onResults);
+      await s.initialize();
+      seg=s; return s;
+    })();
+    return loading;
+  }
+  // MediaPipe hands back a soft mask (person ≈ white); resample it to W×H.
+  function onResults(results){
+    const tmp=document.createElement('canvas'); tmp.width=W; tmp.height=H;
+    const tctx=tmp.getContext('2d');
+    tctx.drawImage(results.segmentationMask,0,0,W,H);
+    const md=tctx.getImageData(0,0,W,H).data;
+    mask=new Float32Array(W*H);
+    for(let i=0,p=0;i<W*H;i++,p+=4) mask[i]=md[p]/255;
+    if(pendingResolve){ const r=pendingResolve; pendingResolve=null; r(); }
+  }
+  function segment(imageCanvas){
+    return new Promise((resolve,reject)=>{
+      ensureModel()
+        .then(s=>{ pendingResolve=resolve; return s.send({image:imageCanvas}); })
+        .catch(reject);
+    });
+  }
+
+  function renderResult(){
+    if(!baseData||!mask) return;
+    const ctx=outCanvas.getContext('2d');
+    if(showMask.checked){
+      const out=new ImageData(W,H), d=out.data;
+      for(let i=0,p=0;i<W*H;i++,p+=4){ const v=Math.round(mask[i]*255); d[p]=v; d[p+1]=v; d[p+2]=v; d[p+3]=255; }
+      ctx.putImageData(out,0,0); dlBtn.disabled=false; return;
+    }
+    const t=parseFloat(thr.value), onPerson=targetSel.value==='person';
+    const src=baseData.data;
+    const out=new ImageData(new Uint8ClampedArray(src),W,H), d=out.data;
+    for(let i=0,p=0;i<W*H;i++,p+=4){
+      const isPerson=mask[i]>=t;
+      if((onPerson?isPerson:!isPerson)){  // invert colors on the selected region
+        d[p]=255-src[p]; d[p+1]=255-src[p+1]; d[p+2]=255-src[p+2];
+      }
+    }
+    ctx.putImageData(out,0,0); dlBtn.disabled=false;
+  }
+
+  function scaleCanvas(img){
+    const scale=Math.min(1,MAX_DIM/Math.max(img.width,img.height));
+    const w=Math.max(1,Math.round(img.width*scale)), h=Math.max(1,Math.round(img.height*scale));
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    return c;
+  }
+
+  fileInput.addEventListener('change',async e=>{
+    const f=e.target.files[0]; if(!f||busy) return;
+    sourceName=(f.name||'image').replace(/\.[^.]+$/,'')||'image';
+    const img=await loadImage(f);
+    const c=scaleCanvas(img);
+    W=c.width; H=c.height;
+    inCanvas.width=W; inCanvas.height=H;
+    inCanvas.getContext('2d').drawImage(c,0,0);
+    baseData=inCanvas.getContext('2d').getImageData(0,0,W,H);
+    outCanvas.width=W; outCanvas.height=H;
+    outCanvas.getContext('2d').drawImage(c,0,0);
+    mask=null; dlBtn.disabled=true;
+    busy=true; status.textContent='Loading model & detecting the person…';
+    try{
+      await segment(c);
+      renderResult();
+      status.textContent='Done — switch “Operate on”, adjust the threshold, or toggle “Show mask”.';
+    }catch(err){
+      status.textContent='Could not run the segmentation model ('+((err&&err.message)||err)+
+        '). Your browser may not support WebAssembly SIMD.';
+    }finally{ busy=false; }
+  });
+
+  dlBtn.addEventListener('click',()=>{
+    const suffix=showMask.checked?'mask':(targetSel.value+'_invert');
+    download(outCanvas, sourceName+'_'+suffix+'.png');
+  });
 })();
 </script>
 </body>
