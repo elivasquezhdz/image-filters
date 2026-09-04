@@ -813,6 +813,14 @@
           <input type="range" id="personThr" min="0" max="1" step="0.01" value="0.5">
         </div>
         <div class="control">
+          <label>Grow / shrink · <span class="val" id="personGrowVal">0 px</span></label>
+          <input type="range" id="personGrow" min="-30" max="30" step="1" value="0">
+        </div>
+        <div class="control">
+          <label>Smooth edges · <span class="val" id="personFeatherVal">3 px</span></label>
+          <input type="range" id="personFeather" min="0" max="40" step="1" value="3">
+        </div>
+        <div class="control">
           <label>Preview</label>
           <div class="switch" style="height:38px">
             <input type="checkbox" id="personShowMask">
@@ -836,9 +844,11 @@
         first use.</p>
       <p class="hint">Uses MediaPipe Selfie Segmentation, self-hosted under <code>vendor/selfie/</code> and
         loaded only when you first use this tab. Needs a browser with WebAssembly SIMD (all current
-        browsers). Large images are processed at up to 1600&nbsp;px on the long side. The
-        <strong>threshold</strong> sets how much of the soft mask counts as “person”; <strong>Show mask</strong>
-        previews the detected region (white = person).</p>
+        browsers). Large images are processed at up to 1600&nbsp;px on the long side. The raw mask is a bit
+        rough, so refine it: <strong>threshold</strong> sets how much counts as “person”,
+        <strong>grow / shrink</strong> dilates (+) or erodes (−) the region to cover missed bits or trim
+        spill, and <strong>smooth edges</strong> feathers the boundary so the cut looks rounded instead of
+        jagged. <strong>Show mask</strong> previews the refined matte (white = selected).</p>
     </div>
   </section>
 </main>
@@ -2634,6 +2644,10 @@ function openImageInTab(blob){
   const opSel=document.getElementById('personOp');
   const thr=document.getElementById('personThr');
   const thrVal=document.getElementById('personThrVal');
+  const grow=document.getElementById('personGrow');
+  const growVal=document.getElementById('personGrowVal');
+  const feather=document.getElementById('personFeather');
+  const featherVal=document.getElementById('personFeatherVal');
   const showMask=document.getElementById('personShowMask');
   const inCanvas=document.getElementById('personIn');
   const outCanvas=document.getElementById('personOut');
@@ -2643,14 +2657,83 @@ function openImageInTab(blob){
   const MAX_DIM=1600;      // cap on the long side of the processed image
   const VENDOR='vendor/selfie/';
   let seg=null, loading=null, pendingResolve=null;
-  let baseData=null, W=0, H=0, mask=null;   // mask: Float32Array W*H, 1 = person
-  let sourceName='image', busy=false;
+  let baseData=null, W=0, H=0;
+  let rawMask=null;        // Float32Array W*H, 1 = person (straight from the model)
+  let procAlpha=null;      // Float32Array W*H after threshold + grow/shrink + feather
+  let sourceName='image', busy=false, rebuildScheduled=false;
 
   thrVal.textContent=parseFloat(thr.value).toFixed(2);
-  thr.addEventListener('input',()=>{ thrVal.textContent=parseFloat(thr.value).toFixed(2); if(mask) renderResult(); });
-  targetSel.addEventListener('change',()=>{ if(mask) renderResult(); });
-  opSel.addEventListener('change',()=>{ if(mask) renderResult(); });
-  showMask.addEventListener('change',()=>{ if(mask) renderResult(); });
+  growVal.textContent=(grow.value>0?'+':'')+grow.value+' px';
+  featherVal.textContent=feather.value+' px';
+  thr.addEventListener('input',()=>{ thrVal.textContent=parseFloat(thr.value).toFixed(2); scheduleRebuild(); });
+  grow.addEventListener('input',()=>{ growVal.textContent=(grow.value>0?'+':'')+grow.value+' px'; scheduleRebuild(); });
+  feather.addEventListener('input',()=>{ featherVal.textContent=feather.value+' px'; scheduleRebuild(); });
+  targetSel.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
+  opSel.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
+  showMask.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
+
+  // Coalesce rapid slider ticks: rebuild the matte at most once per animation frame.
+  function scheduleRebuild(){
+    if(rebuildScheduled||!rawMask) return;
+    rebuildScheduled=true;
+    requestAnimationFrame(()=>{ rebuildScheduled=false; rebuildMask(); renderResult(); });
+  }
+
+  /* ---- mask refinement (operate on a Float32 plane, row-major) ---- */
+  // Separable box blur (running sum, edge-clamped) — feathers / rounds the edges.
+  function boxBlur(src,w,h,r){
+    if(r<1) return src.slice(0);
+    const win=2*r+1, tmp=new Float32Array(w*h), out=new Float32Array(w*h);
+    for(let y=0;y<h;y++){
+      const row=y*w; let sum=0;
+      for(let k=-r;k<=r;k++){ const xx=k<0?0:(k>=w?w-1:k); sum+=src[row+xx]; }
+      for(let x=0;x<w;x++){ tmp[row+x]=sum/win;
+        const xo=x-r<0?0:x-r, xi=x+r+1>=w?w-1:x+r+1; sum+=src[row+xi]-src[row+xo]; }
+    }
+    for(let x=0;x<w;x++){
+      let sum=0;
+      for(let k=-r;k<=r;k++){ const yy=k<0?0:(k>=h?h-1:k); sum+=tmp[yy*w+x]; }
+      for(let y=0;y<h;y++){ out[y*w+x]=sum/win;
+        const yo=y-r<0?0:y-r, yi=y+r+1>=h?h-1:y+r+1; sum+=tmp[yi*w+x]-tmp[yo*w+x]; }
+    }
+    return out;
+  }
+  // Sliding min/max along one strided line (monotonic deque, O(n), edge-clamped).
+  function lineMinMax(a,out,start,stride,n,r,isMax,dq,vals){
+    for(let i=0;i<n;i++) vals[i]=a[start+i*stride];
+    let head=0,tail=0,added=0;
+    for(let i=0;i<n;i++){
+      const hi=i+r<n-1?i+r:n-1;
+      while(added<=hi){ const v=vals[added];
+        while(tail>head && (isMax? v>=vals[dq[tail-1]] : v<=vals[dq[tail-1]])) tail--;
+        dq[tail++]=added; added++;
+      }
+      const lo=i-r>0?i-r:0;
+      while(dq[head]<lo) head++;
+      out[start+i*stride]=vals[dq[head]];
+    }
+  }
+  // Grayscale morphology by radius r: dilate (max) grows, erode (min) shrinks.
+  function morph(src,w,h,r,isMax){
+    const a=src.slice(0), b=new Float32Array(w*h);
+    const mx=w>h?w:h, dq=new Int32Array(mx), vals=new Float32Array(mx);
+    for(let y=0;y<h;y++) lineMinMax(a,b,y*w,1,w,r,isMax,dq,vals);   // horizontal
+    for(let x=0;x<w;x++) lineMinMax(b,a,x,w,h,r,isMax,dq,vals);     // vertical
+    return a;
+  }
+  // Build the refined matte from the raw mask: threshold -> grow/shrink -> feather.
+  function rebuildMask(){
+    if(!rawMask) return;
+    const t=parseFloat(thr.value);
+    let m=new Float32Array(W*H);
+    for(let i=0;i<W*H;i++) m[i]=rawMask[i]>=t?1:0;
+    const g=parseInt(grow.value,10)||0;
+    if(g>0) m=morph(m,W,H,g,true);
+    else if(g<0) m=morph(m,W,H,-g,false);
+    const f=parseInt(feather.value,10)||0;
+    if(f>0) m=boxBlur(m,W,H,f);
+    procAlpha=m;
+  }
 
   function loadScript(src){
     return new Promise((res,rej)=>{
@@ -2679,8 +2762,9 @@ function openImageInTab(blob){
     const tctx=tmp.getContext('2d');
     tctx.drawImage(results.segmentationMask,0,0,W,H);
     const md=tctx.getImageData(0,0,W,H).data;
-    mask=new Float32Array(W*H);
-    for(let i=0,p=0;i<W*H;i++,p+=4) mask[i]=md[p]/255;
+    rawMask=new Float32Array(W*H);
+    for(let i=0,p=0;i<W*H;i++,p+=4) rawMask[i]=md[p]/255;
+    rebuildMask();
     if(pendingResolve){ const r=pendingResolve; pendingResolve=null; r(); }
   }
   function segment(imageCanvas){
@@ -2692,20 +2776,28 @@ function openImageInTab(blob){
   }
 
   function renderResult(){
-    if(!baseData||!mask) return;
+    if(!baseData||!procAlpha) return;
     const ctx=outCanvas.getContext('2d');
-    if(showMask.checked){
+    if(showMask.checked){  // preview the refined matte (white = selected region)
+      const onPerson=targetSel.value==='person';
       const out=new ImageData(W,H), d=out.data;
-      for(let i=0,p=0;i<W*H;i++,p+=4){ const v=Math.round(mask[i]*255); d[p]=v; d[p+1]=v; d[p+2]=v; d[p+3]=255; }
+      for(let i=0,p=0;i<W*H;i++,p+=4){
+        const a=onPerson?procAlpha[i]:1-procAlpha[i];
+        const v=Math.round(a*255); d[p]=v; d[p+1]=v; d[p+2]=v; d[p+3]=255;
+      }
       ctx.putImageData(out,0,0); dlBtn.disabled=false; return;
     }
-    const t=parseFloat(thr.value), onPerson=targetSel.value==='person';
+    const onPerson=targetSel.value==='person';
     const src=baseData.data;
     const out=new ImageData(new Uint8ClampedArray(src),W,H), d=out.data;
     for(let i=0,p=0;i<W*H;i++,p+=4){
-      const isPerson=mask[i]>=t;
-      if((onPerson?isPerson:!isPerson)){  // invert colors on the selected region
-        d[p]=255-src[p]; d[p+1]=255-src[p+1]; d[p+2]=255-src[p+2];
+      let a=onPerson?procAlpha[i]:1-procAlpha[i];   // selection alpha (feathered)
+      if(a<=0) continue;
+      if(a>=1){ d[p]=255-src[p]; d[p+1]=255-src[p+1]; d[p+2]=255-src[p+2]; }
+      else{                                          // blend original with its inverse
+        d[p]=src[p]+(255-2*src[p])*a;
+        d[p+1]=src[p+1]+(255-2*src[p+1])*a;
+        d[p+2]=src[p+2]+(255-2*src[p+2])*a;
       }
     }
     ctx.putImageData(out,0,0); dlBtn.disabled=false;
@@ -2730,12 +2822,12 @@ function openImageInTab(blob){
     baseData=inCanvas.getContext('2d').getImageData(0,0,W,H);
     outCanvas.width=W; outCanvas.height=H;
     outCanvas.getContext('2d').drawImage(c,0,0);
-    mask=null; dlBtn.disabled=true;
+    rawMask=null; procAlpha=null; dlBtn.disabled=true;
     busy=true; status.textContent='Loading model & detecting the person…';
     try{
       await segment(c);
       renderResult();
-      status.textContent='Done — switch “Operate on”, adjust the threshold, or toggle “Show mask”.';
+      status.textContent='Done — tune “Operate on”, threshold, grow/shrink, smooth edges, or “Show mask”.';
     }catch(err){
       status.textContent='Could not run the segmentation model ('+((err&&err.message)||err)+
         '). Your browser may not support WebAssembly SIMD.';
