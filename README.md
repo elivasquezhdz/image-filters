@@ -148,15 +148,21 @@ el **fondo**. La imagen nunca se sube a ningún servidor.
 
 Parámetros:
 - **Operar sobre (Operate on):** `person` o `background`.
-- **Operación:** **invertir colores** o pasar la zona seleccionada por el **4-Way Collage**
-  (efecto caleidoscopio); la otra parte queda intacta. Con el collage aparece un control de
-  **secciones** (2–60), igual que en la pestaña de collage.
+- **Operación:** **invertir colores**, pasar la zona seleccionada por el **4-Way Collage**
+  (efecto caleidoscopio) o aplicar un **Chroma Shift** (glitch RGB); la otra parte queda
+  intacta. El collage muestra un control de **secciones** (2–60) y el chroma un control de
+  **desplazamiento** y **eje**.
 - **Umbral de máscara (threshold):** cuánta parte de la máscara suave cuenta como «persona».
 - **Crecer / encoger (grow / shrink):** dilata (+) o erosiona (−) la máscara en píxeles para
   cubrir zonas que el modelo se dejó o recortar lo que sobra.
 - **Suavizar bordes (smooth edges):** difumina el borde de la máscara para que el recorte se
   vea redondeado en lugar de dentado (mezcla suave entre original e invertido).
 - **Ver máscara (Show mask):** previsualiza la máscara refinada (blanco = zona seleccionada).
+
+También incluye una **animación de collage**: recorre el número de secciones de un inicio a
+un fin y compone el caleidoscopio sobre la zona seleccionada (con las mismas máscaras y
+refinamientos), reproducible y exportable a **vídeo** o **cuadro PNG** (orden forward/reverse
+y bucle *ping-pong*).
 
 El modelo (~6 MB) se descarga solo la **primera vez** que se usa esta pestaña. Requiere un
 navegador con **WebAssembly SIMD** (todos los navegadores actuales). Las imágenes grandes se

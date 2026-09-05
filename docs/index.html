@@ -785,9 +785,10 @@
       <p class="desc">Detects the <strong>person</strong> in a photo with an on-device segmentation model
         (<a href="https://google.github.io/mediapipe/solutions/selfie_segmentation" target="_blank"
         rel="noopener">MediaPipe Selfie Segmentation</a>), then lets you operate on either the
-        <strong>person</strong> or the <strong>background</strong> — <strong>invert its colors</strong> or
-        run it through the <strong>4-Way Collage</strong> kaleidoscope while the other part stays untouched.
-        The model runs entirely in your browser — your image is never uploaded.</p>
+        <strong>person</strong> or the <strong>background</strong> — <strong>invert its colors</strong>,
+        run it through the <strong>4-Way Collage</strong> kaleidoscope, or apply a <strong>Chroma
+        Shift</strong> (RGB glitch) — while the other part stays untouched. The model runs entirely in your
+        browser — your image is never uploaded.</p>
 
       <div class="filebar">
         <input type="file" id="personFile" accept="image/*">
@@ -807,11 +808,23 @@
           <select id="personOp">
             <option value="invert">Invert colors</option>
             <option value="collage">4-Way Collage</option>
+            <option value="chroma">Chroma Shift</option>
           </select>
         </div>
         <div class="control" id="personSectionsCtl" style="display:none">
           <label>Collage sections · <span class="val" id="personSectionsVal">20</span></label>
           <input type="range" id="personSections" min="2" max="60" value="20">
+        </div>
+        <div class="control" id="personChromaAmtCtl" style="display:none">
+          <label>Chroma shift · <span class="val" id="personChromaAmtVal">4%</span></label>
+          <input type="range" id="personChromaAmt" min="0" max="30" step="0.5" value="4">
+        </div>
+        <div class="control" id="personChromaAxisCtl" style="display:none">
+          <label>Chroma axis</label>
+          <select id="personChromaAxis">
+            <option value="x">Horizontal</option>
+            <option value="y">Vertical</option>
+          </select>
         </div>
         <div class="control">
           <label>Mask threshold · <span class="val" id="personThrVal">0.50</span></label>
@@ -854,6 +867,68 @@
         <strong>grow / shrink</strong> dilates (+) or erodes (−) the region to cover missed bits or trim
         spill, and <strong>smooth edges</strong> feathers the boundary so the cut looks rounded instead of
         jagged. <strong>Show mask</strong> previews the refined matte (white = selected).</p>
+    </div>
+
+    <div class="card">
+      <h2>Person Collage Animation</h2>
+      <p class="desc">Animate the <strong>4-Way Collage</strong> on the selected region by sweeping the
+        number of <em>sections</em> across a range — the person (or background) turns into a shifting
+        kaleidoscope while the rest stays still. Uses the same photo, target and mask refinements from
+        above; press <strong>Generate</strong> after loading a photo.</p>
+
+      <div class="controls">
+        <div class="control">
+          <label>Start</label>
+          <input type="number" id="personAnimStart" min="2" max="60" value="2">
+        </div>
+        <div class="control">
+          <label>End</label>
+          <input type="number" id="personAnimEnd" min="2" max="60" value="40">
+        </div>
+        <div class="control">
+          <label>Step</label>
+          <input type="number" id="personAnimStep" min="1" max="20" value="2">
+        </div>
+        <div class="control">
+          <label>Speed (FPS) · <span class="val" id="personAnimFpsVal">12</span></label>
+          <input type="range" id="personAnimFps" min="1" max="30" value="12">
+        </div>
+        <div class="control">
+          <label>Order</label>
+          <select id="personAnimOrder">
+            <option value="forward">Forward</option>
+            <option value="reverse">Reverse</option>
+          </select>
+        </div>
+        <div class="control">
+          <label>Loop</label>
+          <div class="switch" style="height:38px">
+            <input type="checkbox" id="personAnimPing" checked>
+            <label for="personAnimPing" style="text-transform:none;color:var(--text)">Ping-pong</label>
+          </div>
+        </div>
+        <div class="control">
+          <button id="personAnimRun" disabled>Generate animation</button>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <div class="canvas-box">
+          <strong>Animation</strong>
+          <canvas id="personAnimOut"></canvas>
+          <div class="row" style="justify-content:center">
+            <button class="ghost" id="personAnimPlay" disabled>▶ Play</button>
+            <button class="dl" id="personAnimVideo" disabled>⬇ Download video</button>
+            <button class="ghost" id="personAnimFrame" disabled>⬇ Frame (PNG)</button>
+          </div>
+          <span class="hint" id="personAnimStatus">Upload a photo above, then press “Generate animation”.</span>
+        </div>
+      </div>
+      <p class="hint">Frames are rendered one by one at a reduced size (long side ≤ 512&nbsp;px, up to 60
+        frames) so the page stays responsive. The collage is composited into the current target with the
+        refined mask (grow/shrink + smooth edges apply). Video export uses <code>MediaRecorder</code> and
+        prefers <strong>MP4</strong>; if the browser can't record the canvas (e.g. some iOS) use “Frame
+        (PNG)”.</p>
     </div>
   </section>
 </main>
@@ -1009,6 +1084,36 @@ const CollageFx=(function(){
     return sliceAndReorder(vc,sections,'h');
   }
   return {renderCollage};
+})();
+
+/* ------------------------------------------------------------------ */
+/*  Chroma Shift core (shared by the Chroma Shift tab and Person tab) */
+/* ------------------------------------------------------------------ */
+const ChromaFx=(function(){
+  // Shift one channel of `out`, sampling from `src` by (dx,dy).
+  function shiftChannel(src,out,w,h,ch,dx,dy){
+    const s=src.data, o=out.data;
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const sx=x-dx, sy=y-dy;
+        const t=(y*w+x)*4+ch;
+        if(sx>=0&&sx<w&&sy>=0&&sy<h) o[t]=s[(sy*w+sx)*4+ch];
+        else o[t]=0;
+      }
+    }
+  }
+  // New ImageData: base with channels a & b shifted by shiftPx along axis
+  // ('x' or 'y'). mode 'same' shifts both the same way; otherwise opposite.
+  function shift(baseData,w,h,a,b,axis,shiftPx,mode){
+    const out=new ImageData(new Uint8ClampedArray(baseData.data),w,h);
+    const signB=(mode==='same')?-1:1;
+    let dax=0,day=0,dbx=0,dby=0;
+    if(axis==='x'){ dax=-shiftPx; dbx=signB*shiftPx; } else { day=-shiftPx; dby=signB*shiftPx; }
+    shiftChannel(baseData,out,w,h,a,dax,day);
+    shiftChannel(baseData,out,w,h,b,dbx,dby);
+    return out;
+  }
+  return {shift};
 })();
 
 /* ================================================================== */
@@ -1533,34 +1638,11 @@ const CollageFx=(function(){
   const dlBtn=document.getElementById('chromaDl');
   let baseData=null, W=0, H=0;
 
-  // shift one channel of `out` sampling from `src` by (dx,dy)
-  function shiftChannel(src,out,w,h,ch,dx,dy){
-    const s=src.data, o=out.data;
-    for(let y=0;y<h;y++){
-      for(let x=0;x<w;x++){
-        const sx=x-dx, sy=y-dy;
-        const t=(y*w+x)*4+ch;
-        if(sx>=0&&sx<w&&sy>=0&&sy<h){
-          o[t]=s[(sy*w+sx)*4+ch];
-        }else{
-          o[t]=0;
-        }
-      }
-    }
-  }
-
   function render(){
     if(!baseData) return;
-    const out=new ImageData(new Uint8ClampedArray(baseData.data),W,H);
     const shiftPx=Math.round(W*parseFloat(amt.value)/100);
-    const chan=(v)=>({0:0,1:1,2:2}[v]); // 0=R,1=G,2=B  (matches RGBA offset)
     const a=parseInt(chA.value,10), b=parseInt(chB.value,10);
-    const signB = (mode.value==='same')? -1 : 1;
-    let dax=0,day=0,dbx=0,dby=0;
-    if(axis.value==='x'){ dax=-shiftPx; dbx=signB*shiftPx; }
-    else{ day=-shiftPx; dby=signB*shiftPx; }
-    shiftChannel(baseData,out,W,H,a,dax,day);
-    shiftChannel(baseData,out,W,H,b,dbx,dby);
+    const out=ChromaFx.shift(baseData,W,H,a,b,axis.value,shiftPx,mode.value);  // shared core
     outCanvas.getContext('2d').putImageData(out,0,0);
     dlBtn.disabled=false;
   }
@@ -2659,6 +2741,11 @@ const CollageFx=(function(){
   const sections=document.getElementById('personSections');
   const sectionsVal=document.getElementById('personSectionsVal');
   const sectionsCtl=document.getElementById('personSectionsCtl');
+  const chromaAmt=document.getElementById('personChromaAmt');
+  const chromaAmtVal=document.getElementById('personChromaAmtVal');
+  const chromaAmtCtl=document.getElementById('personChromaAmtCtl');
+  const chromaAxis=document.getElementById('personChromaAxis');
+  const chromaAxisCtl=document.getElementById('personChromaAxisCtl');
   const thr=document.getElementById('personThr');
   const thrVal=document.getElementById('personThrVal');
   const grow=document.getElementById('personGrow');
@@ -2678,21 +2765,30 @@ const CollageFx=(function(){
   let rawMask=null;        // Float32Array W*H, 1 = person (straight from the model)
   let procAlpha=null;      // Float32Array W*H after threshold + grow/shrink + feather
   let collageData=null, collageSections=-1;   // cached 4-way collage pixels at W×H
+  let chromaData=null, chromaKey='';           // cached chroma-shift pixels at W×H
   let sourceName='image', busy=false, rebuildScheduled=false;
 
   thrVal.textContent=parseFloat(thr.value).toFixed(2);
   growVal.textContent=(grow.value>0?'+':'')+grow.value+' px';
   featherVal.textContent=feather.value+' px';
   sectionsVal.textContent=sections.value;
+  chromaAmtVal.textContent=chromaAmt.value+'%';
   thr.addEventListener('input',()=>{ thrVal.textContent=parseFloat(thr.value).toFixed(2); scheduleRebuild(); });
   grow.addEventListener('input',()=>{ growVal.textContent=(grow.value>0?'+':'')+grow.value+' px'; scheduleRebuild(); });
   feather.addEventListener('input',()=>{ featherVal.textContent=feather.value+' px'; scheduleRebuild(); });
   sections.addEventListener('input',()=>{ sectionsVal.textContent=sections.value; if(procAlpha) renderResult(); });
+  chromaAmt.addEventListener('input',()=>{ chromaAmtVal.textContent=chromaAmt.value+'%'; if(procAlpha) renderResult(); });
+  chromaAxis.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
   targetSel.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
   opSel.addEventListener('change',()=>{ syncOpUI(); if(procAlpha) renderResult(); });
   showMask.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
 
-  function syncOpUI(){ sectionsCtl.style.display = opSel.value==='collage' ? 'flex' : 'none'; }
+  function syncOpUI(){
+    const op=opSel.value;
+    sectionsCtl.style.display   = op==='collage' ? 'flex' : 'none';
+    chromaAmtCtl.style.display  = op==='chroma'  ? 'flex' : 'none';
+    chromaAxisCtl.style.display = op==='chroma'  ? 'flex' : 'none';
+  }
   syncOpUI();
 
   // 4-way collage of the current image at W×H, cached by section count.
@@ -2704,6 +2800,22 @@ const CollageFx=(function(){
     collageData=tmp.getContext('2d').getImageData(0,0,W,H).data;
     collageSections=n;
     return collageData;
+  }
+  // Chroma shift (classic red/blue opposite) of the current image, cached by amount+axis.
+  function getChromaData(){
+    const shiftPx=Math.round(W*parseFloat(chromaAmt.value)/100);
+    const key=chromaAxis.value+'_'+shiftPx;
+    if(chromaData && chromaKey===key) return chromaData;
+    chromaData=ChromaFx.shift(baseData,W,H,2,0,chromaAxis.value,shiftPx,'opposite').data;
+    chromaKey=key;
+    return chromaData;
+  }
+  // The "modified colour" source for the selected region (null = invert, handled inline).
+  function getModData(){
+    const op=opSel.value;
+    if(op==='collage') return getCollageData(parseInt(sections.value,10)||20);
+    if(op==='chroma')  return getChromaData();
+    return null;
   }
 
   // Coalesce rapid slider ticks: rebuild the matte at most once per animation frame.
@@ -2822,15 +2934,14 @@ const CollageFx=(function(){
       ctx.putImageData(out,0,0); dlBtn.disabled=false; return;
     }
     const onPerson=targetSel.value==='person';
-    const collage=opSel.value==='collage';
-    const mod=collage?getCollageData(parseInt(sections.value,10)||20):null;
+    const mod=getModData();                          // collage / chroma pixels, or null for invert
     const src=baseData.data;
     const out=new ImageData(new Uint8ClampedArray(src),W,H), d=out.data;
     for(let i=0,p=0;i<W*H;i++,p+=4){
       const a=onPerson?procAlpha[i]:1-procAlpha[i];   // selection alpha (feathered)
       if(a<=0) continue;
-      // the modified colour for the selected region: 4-way collage, or the inverse
-      const mr=collage?mod[p]:255-src[p], mg=collage?mod[p+1]:255-src[p+1], mb=collage?mod[p+2]:255-src[p+2];
+      // the modified colour for the selected region: collage / chroma, or the inverse
+      const mr=mod?mod[p]:255-src[p], mg=mod?mod[p+1]:255-src[p+1], mb=mod?mod[p+2]:255-src[p+2];
       if(a>=1){ d[p]=mr; d[p+1]=mg; d[p+2]=mb; }
       else{                                            // feathered edge: blend original with the modified colour
         d[p]=src[p]+(mr-src[p])*a;
@@ -2860,12 +2971,14 @@ const CollageFx=(function(){
     baseData=inCanvas.getContext('2d').getImageData(0,0,W,H);
     outCanvas.width=W; outCanvas.height=H;
     outCanvas.getContext('2d').drawImage(c,0,0);
-    rawMask=null; procAlpha=null; collageData=null; collageSections=-1; dlBtn.disabled=true;
+    rawMask=null; procAlpha=null; collageData=null; collageSections=-1; chromaData=null; chromaKey='';
+    dlBtn.disabled=true; animResetForNewImage();
     busy=true; status.textContent='Loading model & detecting the person…';
     try{
       await segment(c);
       renderResult();
-      status.textContent='Done — tune “Operate on”, threshold, grow/shrink, smooth edges, or “Show mask”.';
+      animRun.disabled=false;
+      status.textContent='Done — pick an operation, tune the mask, or use the Collage animation below.';
     }catch(err){
       status.textContent='Could not run the segmentation model ('+((err&&err.message)||err)+
         '). Your browser may not support WebAssembly SIMD.';
@@ -2876,6 +2989,169 @@ const CollageFx=(function(){
     const suffix=showMask.checked?'mask':(targetSel.value+'_'+opSel.value);
     download(outCanvas, sourceName+'_'+suffix+'.png');
   });
+
+  /* ================= COLLAGE ANIMATION (sweep of sections) ================= */
+  const animStart=document.getElementById('personAnimStart');
+  const animEnd=document.getElementById('personAnimEnd');
+  const animStep=document.getElementById('personAnimStep');
+  const animFps=document.getElementById('personAnimFps');
+  const animFpsVal=document.getElementById('personAnimFpsVal');
+  const animOrder=document.getElementById('personAnimOrder');
+  const animPing=document.getElementById('personAnimPing');
+  const animRun=document.getElementById('personAnimRun');
+  const animOut=document.getElementById('personAnimOut');
+  const animPlay=document.getElementById('personAnimPlay');
+  const animVideo=document.getElementById('personAnimVideo');
+  const animFrame=document.getElementById('personAnimFrame');
+  const animStatus=document.getElementById('personAnimStatus');
+
+  const ANIM_MAX_SIDE=512, ANIM_MAX_FRAMES=60;
+  let aframes=[], aseq=[], aseqPos=0, aplaying=false, atimer=null, arecording=false;
+
+  animFpsVal.textContent=animFps.value;
+  animFps.addEventListener('input',()=>{ animFpsVal.textContent=animFps.value; if(aplaying) aStartTimer(); });
+  [animOrder,animPing].forEach(el=>el.addEventListener('change',()=>{
+    if(!aframes.length) return;
+    const was=aplaying; aPause(); aBuildSeq(); aseqPos=0; aDrawAt(0); if(was) aPlay();
+  }));
+  [animStart,animEnd,animStep].forEach(el=>el.addEventListener('change',()=>{
+    if(aframes.length){ animResetKeepImage(); animStatus.textContent='Settings changed — press “Generate animation”.'; }
+  }));
+
+  // Resample the refined alpha (W×H) to a smaller size via a grayscale canvas.
+  function alphaAt(w,h){
+    const big=document.createElement('canvas'); big.width=W; big.height=H;
+    const id=new ImageData(W,H);
+    for(let i=0,p=0;i<W*H;i++,p+=4){ const v=Math.round(procAlpha[i]*255); id.data[p]=v; id.data[p+1]=v; id.data[p+2]=v; id.data[p+3]=255; }
+    big.getContext('2d').putImageData(id,0,0);
+    const small=document.createElement('canvas'); small.width=w; small.height=h;
+    small.getContext('2d').drawImage(big,0,0,w,h);
+    const sd=small.getContext('2d').getImageData(0,0,w,h).data;
+    const a=new Float32Array(w*h);
+    for(let i=0,p=0;i<w*h;i++,p+=4) a[i]=sd[p]/255;
+    return a;
+  }
+  function aBuildSeq(){
+    aseq=aframes.map((_,i)=>i);
+    if(animOrder.value==='reverse') aseq.reverse();
+    if(animPing.checked && aseq.length>2){ const base=aseq.slice(); for(let i=base.length-2;i>=1;i--) aseq.push(base[i]); }
+  }
+  function aDrawAt(pos){
+    if(!aframes.length) return;
+    const fi=aseq[((pos%aseq.length)+aseq.length)%aseq.length];
+    animOut.getContext('2d').drawImage(aframes[fi],0,0);
+  }
+  function aStartTimer(){
+    if(atimer){ clearInterval(atimer); atimer=null; }
+    const fps=Math.max(1,parseInt(animFps.value,10)||12);
+    atimer=setInterval(()=>{ aDrawAt(aseqPos); aseqPos=(aseqPos+1)%aseq.length; },1000/fps);
+  }
+  function aPlay(){ if(aplaying||!aframes.length) return; aplaying=true; animPlay.textContent='⏸ Pause'; aStartTimer(); }
+  function aPause(){ aplaying=false; animPlay.textContent='▶ Play'; if(atimer){ clearInterval(atimer); atimer=null; } }
+  animPlay.addEventListener('click',()=>{ aplaying?aPause():aPlay(); });
+
+  function animResetKeepImage(){
+    aPause(); aframes=[]; aseq=[]; aseqPos=0;
+    animPlay.disabled=true; animVideo.disabled=true; animFrame.disabled=true; animPlay.textContent='▶ Play';
+    if(animOut.width) animOut.getContext('2d').clearRect(0,0,animOut.width,animOut.height);
+  }
+  function animResetForNewImage(){ animResetKeepImage(); animRun.disabled=true; animStatus.textContent='Detecting…'; }
+
+  animRun.addEventListener('click',()=>{
+    if(!procAlpha){ return; }
+    aPause();
+    // Reduced working size for the animation.
+    const scale=Math.min(1, ANIM_MAX_SIDE/Math.max(W,H));
+    const aw=Math.max(2,Math.round(W*scale)), ah=Math.max(2,Math.round(H*scale));
+    const animBase=document.createElement('canvas'); animBase.width=aw; animBase.height=ah;
+    animBase.getContext('2d').drawImage(inCanvas,0,0,aw,ah);
+    const origData=animBase.getContext('2d').getImageData(0,0,aw,ah).data;
+    const alpha=alphaAt(aw,ah);
+    const onPerson=targetSel.value==='person';
+
+    // Section values to sweep, capped in count.
+    let s0=parseInt(animStart.value,10)||2, s1=parseInt(animEnd.value,10)||s0, st=parseInt(animStep.value,10)||1;
+    s0=Math.max(2,s0); s1=Math.max(2,s1); st=Math.max(1,st);
+    const values=[];
+    if(s0<=s1){ for(let s=s0;s<=s1 && values.length<ANIM_MAX_FRAMES;s+=st) values.push(s); }
+    else{ for(let s=s0;s>=s1 && values.length<ANIM_MAX_FRAMES;s-=st) values.push(s); }
+    if(!values.length) values.push(s0);
+
+    aframes=[]; animRun.disabled=true; animPlay.disabled=true; animVideo.disabled=true; animFrame.disabled=true;
+    animOut.width=aw; animOut.height=ah;
+    const tmp=document.createElement('canvas'); tmp.width=aw; tmp.height=ah; const tctx=tmp.getContext('2d');
+
+    let i=0;
+    function step(){
+      if(i>=values.length){ finish(); return; }
+      const coll=CollageFx.renderCollage(animBase,values[i]);   // 2aw×2ah
+      tctx.drawImage(coll,0,0,aw,ah);
+      const cd=tctx.getImageData(0,0,aw,ah).data;
+      const fc=document.createElement('canvas'); fc.width=aw; fc.height=ah;
+      const out=new ImageData(new Uint8ClampedArray(origData),aw,ah), d=out.data;
+      for(let k=0,p=0;k<aw*ah;k++,p+=4){
+        const a=onPerson?alpha[k]:1-alpha[k];
+        if(a<=0) continue;
+        d[p]=origData[p]+(cd[p]-origData[p])*a;
+        d[p+1]=origData[p+1]+(cd[p+1]-origData[p+1])*a;
+        d[p+2]=origData[p+2]+(cd[p+2]-origData[p+2])*a;
+      }
+      fc.getContext('2d').putImageData(out,0,0);
+      aframes.push(fc); i++;
+      animStatus.textContent=`Rendering frame ${i}/${values.length}…`;
+      setTimeout(step,0);
+    }
+    function finish(){
+      aBuildSeq(); aseqPos=0; aDrawAt(0);
+      animRun.disabled=false; animPlay.disabled=false; animFrame.disabled=false;
+      const vtype=aPickVideoType();
+      animVideo.disabled=!vtype;
+      animVideo.textContent=vtype?`⬇ Download video (${vtype.ext.toUpperCase()})`:'⬇ Download video';
+      animStatus.textContent=`${aframes.length} frames · ${aw}×${ah} · sections ${values[0]}→${values[values.length-1]}`;
+      aPlay();
+    }
+    animStatus.textContent='Rendering frames…';
+    setTimeout(step,30);
+  });
+
+  function aPickVideoType(){
+    if(typeof MediaRecorder==='undefined' || typeof animOut.captureStream!=='function') return null;
+    const mp4=['video/mp4;codecs=avc1.42E01E','video/mp4;codecs=avc1.4d002a','video/mp4;codecs=avc1','video/mp4;codecs=h264'];
+    const webm=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+    for(const m of mp4)  if(MediaRecorder.isTypeSupported(m)) return {mime:m, ext:'mp4'};
+    for(const m of webm) if(MediaRecorder.isTypeSupported(m)) return {mime:m, ext:'webm'};
+    return null;
+  }
+  animVideo.addEventListener('click',()=>{
+    if(!aframes.length||arecording) return;
+    const vtype=aPickVideoType();
+    if(!vtype){ alert('Your browser can\'t record video. Use “Frame (PNG)”.'); return; }
+    aPause();
+    const fps=Math.max(1,parseInt(animFps.value,10)||12);
+    let stream, rec;
+    try{ stream=animOut.captureStream(fps); rec=new MediaRecorder(stream,{mimeType:vtype.mime}); }
+    catch(err){ alert('Couldn\'t start recording: '+err.message); return; }
+    const chunks=[];
+    rec.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop=()=>{
+      arecording=false; animVideo.disabled=false; animVideo.textContent=`⬇ Download video (${vtype.ext.toUpperCase()})`;
+      const blob=new Blob(chunks,{type:vtype.mime}), url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download=`${sourceName}_${targetSel.value}_collage_anim.${vtype.ext}`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+      animStatus.textContent=`${vtype.ext.toUpperCase()} downloaded · ${aframes.length} frames.`;
+      aPlay();
+    };
+    arecording=true; animVideo.disabled=true; animVideo.textContent='Recording…';
+    const frameMs=1000/fps;
+    const minFrames=Math.max(aseq.length, Math.ceil(fps*1.5));
+    const loops=Math.max(1, Math.ceil(minFrames/aseq.length));
+    const total=aseq.length*loops;
+    rec.start();
+    let pos=0;
+    const iv=setInterval(()=>{ aDrawAt(pos); pos++; if(pos>=total){ clearInterval(iv); setTimeout(()=>{ try{rec.stop();}catch(_){} }, frameMs+40); } },frameMs);
+  });
+  animFrame.addEventListener('click',()=>download(animOut, sourceName+'_'+targetSel.value+'_collage_frame.png'));
 })();
 </script>
 </body>
