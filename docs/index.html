@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Image Filters — Boxes · Animation · Fill · Chroma Shift · Collage · Vampire · Slideshow · Person</title>
+<title>Image Filters — Boxes · Fill · Chroma Shift · Collage · Vampire · Slideshow · Person</title>
 <style>
   :root{
     --bg:#0f1115;
@@ -155,7 +155,6 @@
 
 <div class="tabs">
   <button class="tab active" data-view="boxes">🧩 Boxes</button>
-  <button class="tab" data-view="anim">🎞️ Boxes Animation</button>
   <button class="tab" data-view="fill">🪣 Horizontal / Vertical Fill</button>
   <button class="tab" data-view="chroma">🌈 Chroma Shift</button>
   <button class="tab" data-view="collage">🪞 4-Way Collage</button>
@@ -269,10 +268,8 @@
       <p class="hint" id="boxes2Hint">In percentage mode, width is % of the image width and height is %
         of the height. The last block in each row/column is cropped if it doesn't fit.</p>
     </div>
-  </section>
 
-  <!-- ================= BOXES ANIMATION ================= -->
-  <section class="view" id="view-anim">
+    <!-- Boxes animation (sweep of N) — lives inside the Boxes section -->
     <div class="card">
       <h2>Boxes Animation <span class="badge">2–5 images</span></h2>
       <p class="desc">Generates an <strong>animation</strong> of the Boxes filter by sweeping the grid's
@@ -786,9 +783,10 @@
         (<a href="https://google.github.io/mediapipe/solutions/selfie_segmentation" target="_blank"
         rel="noopener">MediaPipe Selfie Segmentation</a>), then lets you operate on either the
         <strong>person</strong> or the <strong>background</strong> — <strong>invert its colors</strong>,
-        run it through the <strong>4-Way Collage</strong> kaleidoscope, or apply a <strong>Chroma
-        Shift</strong> (RGB glitch) — while the other part stays untouched. The model runs entirely in your
-        browser — your image is never uploaded.</p>
+        run it through the <strong>4-Way Collage</strong> kaleidoscope, apply a <strong>Chroma
+        Shift</strong> (RGB glitch), or drop it to <strong>low resolution</strong> (pixelate) — while the
+        other part stays untouched. The model runs entirely in your browser — your image is never
+        uploaded.</p>
 
       <div class="filebar">
         <input type="file" id="personFile" accept="image/*">
@@ -809,7 +807,12 @@
             <option value="invert">Invert colors</option>
             <option value="collage">4-Way Collage</option>
             <option value="chroma">Chroma Shift</option>
+            <option value="lowres">Low resolution</option>
           </select>
+        </div>
+        <div class="control" id="personLowresCtl" style="display:none">
+          <label>Pixel size · <span class="val" id="personLowresVal">12 px</span></label>
+          <input type="range" id="personLowres" min="2" max="64" step="1" value="12">
         </div>
         <div class="control" id="personSectionsCtl" style="display:none">
           <label>Collage sections · <span class="val" id="personSectionsVal">20</span></label>
@@ -2746,6 +2749,9 @@ const ChromaFx=(function(){
   const chromaAmtCtl=document.getElementById('personChromaAmtCtl');
   const chromaAxis=document.getElementById('personChromaAxis');
   const chromaAxisCtl=document.getElementById('personChromaAxisCtl');
+  const lowres=document.getElementById('personLowres');
+  const lowresVal=document.getElementById('personLowresVal');
+  const lowresCtl=document.getElementById('personLowresCtl');
   const thr=document.getElementById('personThr');
   const thrVal=document.getElementById('personThrVal');
   const grow=document.getElementById('personGrow');
@@ -2766,6 +2772,7 @@ const ChromaFx=(function(){
   let procAlpha=null;      // Float32Array W*H after threshold + grow/shrink + feather
   let collageData=null, collageSections=-1;   // cached 4-way collage pixels at W×H
   let chromaData=null, chromaKey='';           // cached chroma-shift pixels at W×H
+  let lowresData=null, lowresKey=-1;           // cached pixelated pixels at W×H
   let sourceName='image', busy=false, rebuildScheduled=false;
 
   thrVal.textContent=parseFloat(thr.value).toFixed(2);
@@ -2773,12 +2780,14 @@ const ChromaFx=(function(){
   featherVal.textContent=feather.value+' px';
   sectionsVal.textContent=sections.value;
   chromaAmtVal.textContent=chromaAmt.value+'%';
+  lowresVal.textContent=lowres.value+' px';
   thr.addEventListener('input',()=>{ thrVal.textContent=parseFloat(thr.value).toFixed(2); scheduleRebuild(); });
   grow.addEventListener('input',()=>{ growVal.textContent=(grow.value>0?'+':'')+grow.value+' px'; scheduleRebuild(); });
   feather.addEventListener('input',()=>{ featherVal.textContent=feather.value+' px'; scheduleRebuild(); });
   sections.addEventListener('input',()=>{ sectionsVal.textContent=sections.value; if(procAlpha) renderResult(); });
   chromaAmt.addEventListener('input',()=>{ chromaAmtVal.textContent=chromaAmt.value+'%'; if(procAlpha) renderResult(); });
   chromaAxis.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
+  lowres.addEventListener('input',()=>{ lowresVal.textContent=lowres.value+' px'; if(procAlpha) renderResult(); });
   targetSel.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
   opSel.addEventListener('change',()=>{ syncOpUI(); if(procAlpha) renderResult(); });
   showMask.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
@@ -2788,6 +2797,7 @@ const ChromaFx=(function(){
     sectionsCtl.style.display   = op==='collage' ? 'flex' : 'none';
     chromaAmtCtl.style.display  = op==='chroma'  ? 'flex' : 'none';
     chromaAxisCtl.style.display = op==='chroma'  ? 'flex' : 'none';
+    lowresCtl.style.display     = op==='lowres'  ? 'flex' : 'none';
   }
   syncOpUI();
 
@@ -2810,11 +2820,26 @@ const ChromaFx=(function(){
     chromaKey=key;
     return chromaData;
   }
+  // Low-resolution (pixelate): downscale then upscale nearest-neighbour, cached by block size.
+  function getLowresData(block){
+    if(lowresData && lowresKey===block) return lowresData;
+    const sw=Math.max(1,Math.round(W/block)), sh=Math.max(1,Math.round(H/block));
+    const small=document.createElement('canvas'); small.width=sw; small.height=sh;
+    const sctx=small.getContext('2d'); sctx.imageSmoothingEnabled=true;   // average down
+    sctx.drawImage(inCanvas,0,0,sw,sh);
+    const up=document.createElement('canvas'); up.width=W; up.height=H;
+    const uctx=up.getContext('2d'); uctx.imageSmoothingEnabled=false;     // blocky upscale
+    uctx.drawImage(small,0,0,sw,sh,0,0,W,H);
+    lowresData=uctx.getImageData(0,0,W,H).data;
+    lowresKey=block;
+    return lowresData;
+  }
   // The "modified colour" source for the selected region (null = invert, handled inline).
   function getModData(){
     const op=opSel.value;
     if(op==='collage') return getCollageData(parseInt(sections.value,10)||20);
     if(op==='chroma')  return getChromaData();
+    if(op==='lowres')  return getLowresData(parseInt(lowres.value,10)||12);
     return null;
   }
 
@@ -2972,6 +2997,7 @@ const ChromaFx=(function(){
     outCanvas.width=W; outCanvas.height=H;
     outCanvas.getContext('2d').drawImage(c,0,0);
     rawMask=null; procAlpha=null; collageData=null; collageSections=-1; chromaData=null; chromaKey='';
+    lowresData=null; lowresKey=-1;
     dlBtn.disabled=true; animResetForNewImage();
     busy=true; status.textContent='Loading model & detecting the person…';
     try{

@@ -26,7 +26,7 @@ Parámetros comunes:
 - **Orden:** normal o invertido.
 - **Ajuste de tamaño:** al tamaño de la primera imagen o al mínimo común.
 
-### 2. 🎞️ Boxes Animación
+#### 🎞️ Animación (subsección dentro de la pestaña Boxes)
 Anima el filtro **Boxes** recorriendo el número de divisiones `N` de la rejilla
 desde un mínimo hasta un máximo. Cada valor de `N` genera un cuadro y, al
 reproducirlos en secuencia, el mosaico se afina (o se engruesa) progresivamente
@@ -51,7 +51,7 @@ Exportación:
 Para no agotar la memoria del navegador, el número de cuadros y el tamaño de la
 animación se limitan automáticamente.
 
-### 3. 🪣 Horizontal / Vertical Fill
+### 2. 🪣 Horizontal / Vertical Fill
 Selecciona una imagen y, a partir de un **porcentaje de inicio** y una
 **dirección**, replica la fila o columna de ese borde para rellenar el resto de
 la imagen.
@@ -67,7 +67,7 @@ Parámetros:
   en los cuadernos originales y se implementó tanto en la web como en un nuevo
   script de Python (ver [`combined_fill.py`](combined_fill.py)).
 
-### 4. 🌈 Chroma Shift
+### 3. 🌈 Chroma Shift
 Toma una imagen y desplaza **2 canales de color** en una dirección, produciendo
 un efecto de aberración cromática / glitch RGB.
 
@@ -77,7 +77,7 @@ Parámetros:
 - **Desplazamiento:** porcentaje del ancho de la imagen.
 - **Sentido:** opuestos (uno hacia cada lado) o el mismo.
 
-### 5. 🪞 4-Way Collage
+### 4. 🪞 4-Way Collage
 Toma **una sola imagen** y construye un **mosaico 2×2 en espejo** (original, volteo
 horizontal, volteo vertical y ambos). Después divide ese mosaico en **secciones** que
 se intercalan de afuera hacia adentro, generando un collage simétrico de aspecto
@@ -96,7 +96,7 @@ Hay dos secciones:
   permite guardar el **cuadro visible como PNG** para navegadores sin grabación de
   canvas (p. ej. algunos iOS).
 
-### 6. 🧛 Vampire
+### 5. 🧛 Vampire
 Port al navegador del script [`vampire_filter.py`](vampire_filter.py): un preset tipo
 **Lightroom Mobile** («vampire») que aplica toda una cadena de revelado — exposición,
 altas luces / sombras / blancos / negros, balance de blancos cálido, contraste, dehaze,
@@ -121,7 +121,7 @@ Hay dos secciones:
   60 cuadros); el grano usa una semilla fija para no parpadear. Exporta a **vídeo**
   (`MediaRecorder`, prefiriendo MP4) o guarda el **cuadro visible como PNG**.
 
-### 7. 🎬 Slideshow
+### 6. 🎬 Slideshow
 Selecciona **hasta 10 imágenes** y crea un **vídeo** con ellas: cada imagen es un cuadro
 que se reproduce en el orden elegido a los **FPS** indicados. Todo corre localmente en el
 navegador.
@@ -140,7 +140,7 @@ Exportación:
 - **Cuadro (PNG):** guarda el fotograma visible (útil en navegadores sin soporte de
   grabación de canvas, p. ej. algunos iOS).
 
-### 8. 🧍 Person / Background
+### 7. 🧍 Person / Background
 Detecta a la **persona** en una foto con un modelo de segmentación que corre **en el
 navegador** ([MediaPipe Selfie Segmentation](https://google.github.io/mediapipe/solutions/selfie_segmentation),
 alojado localmente en `docs/vendor/selfie/`) y permite operar sobre la **persona** o sobre
@@ -149,9 +149,10 @@ el **fondo**. La imagen nunca se sube a ningún servidor.
 Parámetros:
 - **Operar sobre (Operate on):** `person` o `background`.
 - **Operación:** **invertir colores**, pasar la zona seleccionada por el **4-Way Collage**
-  (efecto caleidoscopio) o aplicar un **Chroma Shift** (glitch RGB); la otra parte queda
-  intacta. El collage muestra un control de **secciones** (2–60) y el chroma un control de
-  **desplazamiento** y **eje**.
+  (efecto caleidoscopio), aplicar un **Chroma Shift** (glitch RGB) o bajarla a **baja
+  resolución** (pixelado); la otra parte queda intacta. El collage muestra un control de
+  **secciones** (2–60), el chroma **desplazamiento** y **eje**, y la baja resolución un
+  control de **tamaño de píxel**.
 - **Umbral de máscara (threshold):** cuánta parte de la máscara suave cuenta como «persona».
 - **Crecer / encoger (grow / shrink):** dilata (+) o erosiona (−) la máscara en píxeles para
   cubrir zonas que el modelo se dejó o recortar lo que sobra.
