@@ -785,9 +785,9 @@
       <p class="desc">Detects the <strong>person</strong> in a photo with an on-device segmentation model
         (<a href="https://google.github.io/mediapipe/solutions/selfie_segmentation" target="_blank"
         rel="noopener">MediaPipe Selfie Segmentation</a>), then lets you operate on either the
-        <strong>person</strong> or the <strong>background</strong>. For now the operation is
-        <strong>invert colors</strong> on whichever you choose. The model runs entirely in your browser —
-        your image is never uploaded.</p>
+        <strong>person</strong> or the <strong>background</strong> — <strong>invert its colors</strong> or
+        run it through the <strong>4-Way Collage</strong> kaleidoscope while the other part stays untouched.
+        The model runs entirely in your browser — your image is never uploaded.</p>
 
       <div class="filebar">
         <input type="file" id="personFile" accept="image/*">
@@ -806,7 +806,12 @@
           <label>Operation</label>
           <select id="personOp">
             <option value="invert">Invert colors</option>
+            <option value="collage">4-Way Collage</option>
           </select>
+        </div>
+        <div class="control" id="personSectionsCtl" style="display:none">
+          <label>Collage sections · <span class="val" id="personSectionsVal">20</span></label>
+          <input type="range" id="personSections" min="2" max="60" value="20">
         </div>
         <div class="control">
           <label>Mask threshold · <span class="val" id="personThrVal">0.50</span></label>
@@ -951,6 +956,60 @@ function openImageInTab(blob){
   window.open(url,'_blank');
   setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
+
+/* ------------------------------------------------------------------ */
+/*  4-Way Collage core (shared by the Collage tab and Person tab)     */
+/*  Mirrors live_collage.py / the notebooks.                          */
+/* ------------------------------------------------------------------ */
+const CollageFx=(function(){
+  // 2×2 mirrored mosaic: original, h-flip, v-flip, hv-flip.
+  function createMosaic(img){
+    const w=img.width, h=img.height;
+    const c=document.createElement('canvas');
+    c.width=w*2; c.height=h*2;
+    const ctx=c.getContext('2d');
+    ctx.drawImage(img,0,0);
+    ctx.save(); ctx.scale(-1,1);  ctx.drawImage(img,-2*w,0);    ctx.restore(); // horizontal flip
+    ctx.save(); ctx.scale(1,-1);  ctx.drawImage(img,0,-2*h);    ctx.restore(); // vertical flip
+    ctx.save(); ctx.scale(-1,-1); ctx.drawImage(img,-2*w,-2*h); ctx.restore(); // both
+    return c;
+  }
+  function getSlice(src,x,y,w,h){
+    const c=document.createElement('canvas');
+    c.width=w; c.height=h;
+    c.getContext('2d').drawImage(src,x,y,w,h,0,0,w,h);
+    return c;
+  }
+  // Slice into `sections` strips (vertical or horizontal) and interleave them
+  // from the outside in: 1st, last, 2nd, 2nd-last, …
+  function sliceAndReorder(canvas,sections,orientation){
+    const w=canvas.width, h=canvas.height;
+    const slices=[];
+    if(orientation==='v'){
+      const sw=Math.floor(w/sections);
+      for(let i=0;i<sections;i++){ const cw=i===sections-1? w-sw*i : sw; slices.push(getSlice(canvas,i*sw,0,cw,h)); }
+    }else{
+      const sh=Math.floor(h/sections);
+      for(let i=0;i<sections;i++){ const ch=i===sections-1? h-sh*i : sh; slices.push(getSlice(canvas,0,i*sh,w,ch)); }
+    }
+    const out=document.createElement('canvas');
+    out.width=w; out.height=h;
+    const octx=out.getContext('2d');
+    for(let i=0;i<Math.floor(sections/2);i++){
+      const a=slices[i], b=slices[sections-1-i];
+      if(orientation==='v'){ octx.drawImage(a,a.width*(i*2),0); octx.drawImage(b,a.width*(2*i+1),0); }
+      else{ octx.drawImage(a,0,a.height*(i*2)); octx.drawImage(b,0,a.height*(2*i+1)); }
+    }
+    return out;
+  }
+  // Returns a collage canvas at 2× the source dimensions.
+  function renderCollage(src,sections){
+    const mosaic=createMosaic(src);
+    const vc=sliceAndReorder(mosaic,sections,'v');
+    return sliceAndReorder(vc,sections,'h');
+  }
+  return {renderCollage};
+})();
 
 /* ================================================================== */
 /*  BOXES                                                             */
@@ -1556,52 +1615,7 @@ function openImageInTab(blob){
   let playTimer=null;  // preview playback timer
   let recording=false;
 
-  /* ---------- core algorithm (mirrors live_collage.py / the notebooks) ---------- */
-  // 2×2 mirrored mosaic: original, h-flip, v-flip, hv-flip.
-  function createMosaic(img){
-    const w=img.width, h=img.height;
-    const c=document.createElement('canvas');
-    c.width=w*2; c.height=h*2;
-    const ctx=c.getContext('2d');
-    ctx.drawImage(img,0,0);
-    ctx.save(); ctx.scale(-1,1);  ctx.drawImage(img,-2*w,0);    ctx.restore(); // horizontal flip
-    ctx.save(); ctx.scale(1,-1);  ctx.drawImage(img,0,-2*h);    ctx.restore(); // vertical flip
-    ctx.save(); ctx.scale(-1,-1); ctx.drawImage(img,-2*w,-2*h); ctx.restore(); // both
-    return c;
-  }
-  function getSlice(src,x,y,w,h){
-    const c=document.createElement('canvas');
-    c.width=w; c.height=h;
-    c.getContext('2d').drawImage(src,x,y,w,h,0,0,w,h);
-    return c;
-  }
-  // Slice into `sections` strips (vertical or horizontal) and interleave them
-  // from the outside in: 1st, last, 2nd, 2nd-last, …
-  function sliceAndReorder(canvas,sections,orientation){
-    const w=canvas.width, h=canvas.height;
-    const slices=[];
-    if(orientation==='v'){
-      const sw=Math.floor(w/sections);
-      for(let i=0;i<sections;i++){ const cw=i===sections-1? w-sw*i : sw; slices.push(getSlice(canvas,i*sw,0,cw,h)); }
-    }else{
-      const sh=Math.floor(h/sections);
-      for(let i=0;i<sections;i++){ const ch=i===sections-1? h-sh*i : sh; slices.push(getSlice(canvas,0,i*sh,w,ch)); }
-    }
-    const out=document.createElement('canvas');
-    out.width=w; out.height=h;
-    const octx=out.getContext('2d');
-    for(let i=0;i<Math.floor(sections/2);i++){
-      const a=slices[i], b=slices[sections-1-i];
-      if(orientation==='v'){ octx.drawImage(a,a.width*(i*2),0); octx.drawImage(b,a.width*(2*i+1),0); }
-      else{ octx.drawImage(a,0,a.height*(i*2)); octx.drawImage(b,0,a.height*(2*i+1)); }
-    }
-    return out;
-  }
-  function renderCollage(src,sections){
-    const mosaic=createMosaic(src);
-    const vc=sliceAndReorder(mosaic,sections,'v');
-    return sliceAndReorder(vc,sections,'h');
-  }
+  const renderCollage=CollageFx.renderCollage;  // shared core (see CollageFx above)
 
   /* ---------- static collage ---------- */
   function drawStatic(){
@@ -2642,6 +2656,9 @@ function openImageInTab(blob){
   const fileInput=document.getElementById('personFile');
   const targetSel=document.getElementById('personTarget');
   const opSel=document.getElementById('personOp');
+  const sections=document.getElementById('personSections');
+  const sectionsVal=document.getElementById('personSectionsVal');
+  const sectionsCtl=document.getElementById('personSectionsCtl');
   const thr=document.getElementById('personThr');
   const thrVal=document.getElementById('personThrVal');
   const grow=document.getElementById('personGrow');
@@ -2660,17 +2677,34 @@ function openImageInTab(blob){
   let baseData=null, W=0, H=0;
   let rawMask=null;        // Float32Array W*H, 1 = person (straight from the model)
   let procAlpha=null;      // Float32Array W*H after threshold + grow/shrink + feather
+  let collageData=null, collageSections=-1;   // cached 4-way collage pixels at W×H
   let sourceName='image', busy=false, rebuildScheduled=false;
 
   thrVal.textContent=parseFloat(thr.value).toFixed(2);
   growVal.textContent=(grow.value>0?'+':'')+grow.value+' px';
   featherVal.textContent=feather.value+' px';
+  sectionsVal.textContent=sections.value;
   thr.addEventListener('input',()=>{ thrVal.textContent=parseFloat(thr.value).toFixed(2); scheduleRebuild(); });
   grow.addEventListener('input',()=>{ growVal.textContent=(grow.value>0?'+':'')+grow.value+' px'; scheduleRebuild(); });
   feather.addEventListener('input',()=>{ featherVal.textContent=feather.value+' px'; scheduleRebuild(); });
+  sections.addEventListener('input',()=>{ sectionsVal.textContent=sections.value; if(procAlpha) renderResult(); });
   targetSel.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
-  opSel.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
+  opSel.addEventListener('change',()=>{ syncOpUI(); if(procAlpha) renderResult(); });
   showMask.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
+
+  function syncOpUI(){ sectionsCtl.style.display = opSel.value==='collage' ? 'flex' : 'none'; }
+  syncOpUI();
+
+  // 4-way collage of the current image at W×H, cached by section count.
+  function getCollageData(n){
+    if(collageData && collageSections===n) return collageData;
+    const coll=CollageFx.renderCollage(inCanvas,n);   // 2W×2H kaleidoscope
+    const tmp=document.createElement('canvas'); tmp.width=W; tmp.height=H;
+    tmp.getContext('2d').drawImage(coll,0,0,W,H);     // scale back to the source size
+    collageData=tmp.getContext('2d').getImageData(0,0,W,H).data;
+    collageSections=n;
+    return collageData;
+  }
 
   // Coalesce rapid slider ticks: rebuild the matte at most once per animation frame.
   function scheduleRebuild(){
@@ -2788,16 +2822,20 @@ function openImageInTab(blob){
       ctx.putImageData(out,0,0); dlBtn.disabled=false; return;
     }
     const onPerson=targetSel.value==='person';
+    const collage=opSel.value==='collage';
+    const mod=collage?getCollageData(parseInt(sections.value,10)||20):null;
     const src=baseData.data;
     const out=new ImageData(new Uint8ClampedArray(src),W,H), d=out.data;
     for(let i=0,p=0;i<W*H;i++,p+=4){
-      let a=onPerson?procAlpha[i]:1-procAlpha[i];   // selection alpha (feathered)
+      const a=onPerson?procAlpha[i]:1-procAlpha[i];   // selection alpha (feathered)
       if(a<=0) continue;
-      if(a>=1){ d[p]=255-src[p]; d[p+1]=255-src[p+1]; d[p+2]=255-src[p+2]; }
-      else{                                          // blend original with its inverse
-        d[p]=src[p]+(255-2*src[p])*a;
-        d[p+1]=src[p+1]+(255-2*src[p+1])*a;
-        d[p+2]=src[p+2]+(255-2*src[p+2])*a;
+      // the modified colour for the selected region: 4-way collage, or the inverse
+      const mr=collage?mod[p]:255-src[p], mg=collage?mod[p+1]:255-src[p+1], mb=collage?mod[p+2]:255-src[p+2];
+      if(a>=1){ d[p]=mr; d[p+1]=mg; d[p+2]=mb; }
+      else{                                            // feathered edge: blend original with the modified colour
+        d[p]=src[p]+(mr-src[p])*a;
+        d[p+1]=src[p+1]+(mg-src[p+1])*a;
+        d[p+2]=src[p+2]+(mb-src[p+2])*a;
       }
     }
     ctx.putImageData(out,0,0); dlBtn.disabled=false;
@@ -2822,7 +2860,7 @@ function openImageInTab(blob){
     baseData=inCanvas.getContext('2d').getImageData(0,0,W,H);
     outCanvas.width=W; outCanvas.height=H;
     outCanvas.getContext('2d').drawImage(c,0,0);
-    rawMask=null; procAlpha=null; dlBtn.disabled=true;
+    rawMask=null; procAlpha=null; collageData=null; collageSections=-1; dlBtn.disabled=true;
     busy=true; status.textContent='Loading model & detecting the person…';
     try{
       await segment(c);
@@ -2835,7 +2873,7 @@ function openImageInTab(blob){
   });
 
   dlBtn.addEventListener('click',()=>{
-    const suffix=showMask.checked?'mask':(targetSel.value+'_invert');
+    const suffix=showMask.checked?'mask':(targetSel.value+'_'+opSel.value);
     download(outCanvas, sourceName+'_'+suffix+'.png');
   });
 })();
