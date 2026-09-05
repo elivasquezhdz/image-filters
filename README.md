@@ -149,10 +149,11 @@ el **fondo**. La imagen nunca se sube a ningún servidor.
 Parámetros:
 - **Operar sobre (Operate on):** `person` o `background`.
 - **Operación:** **invertir colores**, pasar la zona seleccionada por el **4-Way Collage**
-  (efecto caleidoscopio), aplicar un **Chroma Shift** (glitch RGB) o bajarla a **baja
-  resolución** (pixelado); la otra parte queda intacta. El collage muestra un control de
-  **secciones** (2–60), el chroma **desplazamiento** y **eje**, y la baja resolución un
-  control de **tamaño de píxel**.
+  (efecto caleidoscopio), aplicar un **Chroma Shift** (glitch RGB), bajarla a **baja
+  resolución** (pixelado) o difuminarla con un **Horizontal / Vertical Fill**; la otra parte
+  queda intacta. El collage muestra un control de **secciones** (2–60), el chroma
+  **desplazamiento** y **eje**, la baja resolución un **tamaño de píxel**, y el fill una
+  **dirección** y un **inicio del relleno (%)**.
 - **Umbral de máscara (threshold):** cuánta parte de la máscara suave cuenta como «persona».
 - **Crecer / encoger (grow / shrink):** dilata (+) o erosiona (−) la máscara en píxeles para
   cubrir zonas que el modelo se dejó o recortar lo que sobra.
