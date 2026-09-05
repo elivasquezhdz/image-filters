@@ -784,9 +784,10 @@
         rel="noopener">MediaPipe Selfie Segmentation</a>), then lets you operate on either the
         <strong>person</strong> or the <strong>background</strong> — <strong>invert its colors</strong>,
         run it through the <strong>4-Way Collage</strong> kaleidoscope, apply a <strong>Chroma
-        Shift</strong> (RGB glitch), drop it to <strong>low resolution</strong> (pixelate), or smear it
-        with a <strong>Horizontal / Vertical Fill</strong> — while the other part stays untouched. The
-        model runs entirely in your browser — your image is never uploaded.</p>
+        Shift</strong> (RGB glitch), drop it to <strong>low resolution</strong> (pixelate), smear it
+        with a <strong>Horizontal / Vertical Fill</strong>, or <strong>blur</strong> it (e.g. a portrait
+        background blur) — while the other part stays untouched. The model runs entirely in your browser —
+        your image is never uploaded.</p>
 
       <div class="filebar">
         <input type="file" id="personFile" accept="image/*">
@@ -809,7 +810,12 @@
             <option value="chroma">Chroma Shift</option>
             <option value="lowres">Low resolution</option>
             <option value="fill">Horizontal / Vertical Fill</option>
+            <option value="blur">Blur</option>
           </select>
+        </div>
+        <div class="control" id="personBlurCtl" style="display:none">
+          <label>Blur · <span class="val" id="personBlurVal">12 px</span></label>
+          <input type="range" id="personBlur" min="1" max="50" step="1" value="12">
         </div>
         <div class="control" id="personFillDirCtl" style="display:none">
           <label>Fill direction</label>
@@ -2777,6 +2783,9 @@ const FillFx=(function(){
   const fillPct=document.getElementById('personFillPct');
   const fillPctVal=document.getElementById('personFillPctVal');
   const fillPctCtl=document.getElementById('personFillPctCtl');
+  const blur=document.getElementById('personBlur');
+  const blurVal=document.getElementById('personBlurVal');
+  const blurCtl=document.getElementById('personBlurCtl');
   const thr=document.getElementById('personThr');
   const thrVal=document.getElementById('personThrVal');
   const grow=document.getElementById('personGrow');
@@ -2799,6 +2808,7 @@ const FillFx=(function(){
   let chromaData=null, chromaKey='';           // cached chroma-shift pixels at W×H
   let lowresData=null, lowresKey=-1;           // cached pixelated pixels at W×H
   let fillData=null, fillKey='';               // cached fill pixels at W×H
+  let blurPixels=null, blurKey=-1;             // cached blurred pixels at W×H
   let sourceName='image', busy=false, rebuildScheduled=false;
 
   thrVal.textContent=parseFloat(thr.value).toFixed(2);
@@ -2808,6 +2818,7 @@ const FillFx=(function(){
   chromaAmtVal.textContent=chromaAmt.value+'%';
   lowresVal.textContent=lowres.value+' px';
   fillPctVal.textContent=fillPct.value+'%';
+  blurVal.textContent=blur.value+' px';
   thr.addEventListener('input',()=>{ thrVal.textContent=parseFloat(thr.value).toFixed(2); scheduleRebuild(); });
   grow.addEventListener('input',()=>{ growVal.textContent=(grow.value>0?'+':'')+grow.value+' px'; scheduleRebuild(); });
   feather.addEventListener('input',()=>{ featherVal.textContent=feather.value+' px'; scheduleRebuild(); });
@@ -2817,6 +2828,7 @@ const FillFx=(function(){
   lowres.addEventListener('input',()=>{ lowresVal.textContent=lowres.value+' px'; if(procAlpha) renderResult(); });
   fillDir.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
   fillPct.addEventListener('input',()=>{ fillPctVal.textContent=fillPct.value+'%'; if(procAlpha) renderResult(); });
+  blur.addEventListener('input',()=>{ blurVal.textContent=blur.value+' px'; if(procAlpha) renderResult(); });
   targetSel.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
   opSel.addEventListener('change',()=>{ syncOpUI(); if(procAlpha) renderResult(); });
   showMask.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
@@ -2829,8 +2841,12 @@ const FillFx=(function(){
     lowresCtl.style.display     = op==='lowres'  ? 'flex' : 'none';
     fillDirCtl.style.display    = op==='fill'    ? 'flex' : 'none';
     fillPctCtl.style.display    = op==='fill'    ? 'flex' : 'none';
+    blurCtl.style.display       = op==='blur'    ? 'flex' : 'none';
   }
   syncOpUI();
+
+  // Native canvas blur where available (fast, GPU); manual box blur otherwise.
+  const supportsCanvasFilter = (()=>{ try{ return typeof document.createElement('canvas').getContext('2d').filter!=='undefined'; }catch(e){ return false; } })();
 
   // 4-way collage of the current image at W×H, cached by section count.
   function getCollageData(n){
@@ -2873,6 +2889,44 @@ const FillFx=(function(){
     fillKey=key;
     return fillData;
   }
+  // Gaussian blur of the current image, cached by radius. Uses the native
+  // canvas filter when available, else a separable box blur (3 passes ≈ Gaussian).
+  function getBlurData(px){
+    if(blurPixels && blurKey===px) return blurPixels;
+    if(px<=0){ blurPixels=baseData.data; blurKey=0; return blurPixels; }
+    if(supportsCanvasFilter){
+      // Pad with stretched edge pixels so the blur clamps at the border instead
+      // of fading to transparent (which would darken the edges).
+      const pad=Math.min(px, Math.max(W,H)), pw=W+2*pad, ph=H+2*pad;
+      const pc=document.createElement('canvas'); pc.width=pw; pc.height=ph;
+      const pcx=pc.getContext('2d');
+      pcx.drawImage(inCanvas,pad,pad);
+      pcx.drawImage(inCanvas,0,0,1,H, 0,pad,pad,H);              // left edge
+      pcx.drawImage(inCanvas,W-1,0,1,H, W+pad,pad,pad,H);        // right edge
+      pcx.drawImage(inCanvas,0,0,W,1, pad,0,W,pad);              // top edge
+      pcx.drawImage(inCanvas,0,H-1,W,1, pad,H+pad,W,pad);        // bottom edge
+      pcx.drawImage(inCanvas,0,0,1,1, 0,0,pad,pad);              // corners
+      pcx.drawImage(inCanvas,W-1,0,1,1, W+pad,0,pad,pad);
+      pcx.drawImage(inCanvas,0,H-1,1,1, 0,H+pad,pad,pad);
+      pcx.drawImage(inCanvas,W-1,H-1,1,1, W+pad,H+pad,pad,pad);
+      const bc=document.createElement('canvas'); bc.width=pw; bc.height=ph;
+      const bx=bc.getContext('2d');
+      bx.filter='blur('+px+'px)'; bx.drawImage(pc,0,0); bx.filter='none';
+      blurPixels=bx.getImageData(pad,pad,W,H).data;
+    }else{
+      const n=W*H, src=baseData.data;
+      const R=new Float32Array(n), G=new Float32Array(n), B=new Float32Array(n);
+      for(let i=0,p=0;i<n;i++,p+=4){ R[i]=src[p]; G[i]=src[p+1]; B[i]=src[p+2]; }
+      const r=Math.max(1,Math.round(px/3));
+      let Rb=R,Gb=G,Bb=B;
+      for(let k=0;k<3;k++){ Rb=boxBlur(Rb,W,H,r); Gb=boxBlur(Gb,W,H,r); Bb=boxBlur(Bb,W,H,r); }
+      const out=new Uint8ClampedArray(src.length);
+      for(let i=0,p=0;i<n;i++,p+=4){ out[p]=Rb[i]; out[p+1]=Gb[i]; out[p+2]=Bb[i]; out[p+3]=255; }
+      blurPixels=out;
+    }
+    blurKey=px;
+    return blurPixels;
+  }
   // The "modified colour" source for the selected region (null = invert, handled inline).
   function getModData(){
     const op=opSel.value;
@@ -2880,6 +2934,7 @@ const FillFx=(function(){
     if(op==='chroma')  return getChromaData();
     if(op==='lowres')  return getLowresData(parseInt(lowres.value,10)||12);
     if(op==='fill')    return getFillData();
+    if(op==='blur')    return getBlurData(parseInt(blur.value,10)||12);
     return null;
   }
 
@@ -3037,7 +3092,7 @@ const FillFx=(function(){
     outCanvas.width=W; outCanvas.height=H;
     outCanvas.getContext('2d').drawImage(c,0,0);
     rawMask=null; procAlpha=null; collageData=null; collageSections=-1; chromaData=null; chromaKey='';
-    lowresData=null; lowresKey=-1; fillData=null; fillKey='';
+    lowresData=null; lowresKey=-1; fillData=null; fillKey=''; blurPixels=null; blurKey=-1;
     dlBtn.disabled=true; animResetForNewImage();
     busy=true; status.textContent='Loading model & detecting the person…';
     try{
