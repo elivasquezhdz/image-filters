@@ -148,8 +148,9 @@ el **fondo**. La imagen nunca se sube a ningún servidor.
 
 Parámetros:
 - **Operar sobre (Operate on):** `person` o `background`.
-- **Operación:** por ahora **invertir colores** sobre la zona seleccionada (más adelante se
-  podrán añadir otras operaciones).
+- **Operación:** **invertir colores** o pasar la zona seleccionada por el **4-Way Collage**
+  (efecto caleidoscopio); la otra parte queda intacta. Con el collage aparece un control de
+  **secciones** (2–60), igual que en la pestaña de collage.
 - **Umbral de máscara (threshold):** cuánta parte de la máscara suave cuenta como «persona».
 - **Crecer / encoger (grow / shrink):** dilata (+) o erosiona (−) la máscara en píxeles para
   cubrir zonas que el modelo se dejó o recortar lo que sobra.
