@@ -11,6 +11,13 @@ servidor.
 
 Todos los filtros permiten **descargar** la imagen modificada.
 
+Las secciones de **una sola imagen** (Horizontal / Vertical Fill, Chroma Shift, 4-Way
+Collage, Vampire y Person / Background) incluyen además un botón **📷 Live camera** que
+aplica el efecto **en vivo** sobre la cámara y muestra solo el resultado (no la imagen
+original). Requiere permiso de cámara y **HTTPS** (funciona en la página publicada; no desde
+`file://`). Para mantener la fluidez, el vídeo se procesa a tamaño reducido —más pequeño en
+Vampire (pipeline pesado) y en Person / Background (segmentación por fotograma).
+
 ### 1. 🧩 Boxes
 Acepta **de 2 a 5 imágenes** y las combina en una sola. Divide cada imagen en
 una rejilla `N×N` y toma una sección de píxeles de cada imagen, intercalando las
