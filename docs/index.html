@@ -18,6 +18,7 @@
     --radius:14px;
   }
   *{box-sizing:border-box}
+  [hidden]{display:none!important}
   body{
     margin:0;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -112,6 +113,7 @@
   button:hover{filter:brightness(1.08)}
   button.ghost{background:var(--panel-2);color:var(--text);border:1px solid var(--border)}
   button.dl{background:var(--accent-2);color:#0b1220}
+  button.cam-on{background:var(--danger);color:#0b1220;border-color:var(--danger)}
   button:disabled{opacity:.4;cursor:not-allowed}
   .filebar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px}
   input[type=file]{
@@ -356,6 +358,7 @@
 
       <div class="filebar">
         <input type="file" id="fillFile" accept="image/*">
+        <button class="ghost" id="fillCam">📷 Live camera</button>
         <button class="ghost" id="fillReset" disabled>Reset</button>
       </div>
 
@@ -447,6 +450,7 @@
 
       <div class="filebar">
         <input type="file" id="chromaFile" accept="image/*">
+        <button class="ghost" id="chromaCam">📷 Live camera</button>
       </div>
 
       <div class="controls">
@@ -512,6 +516,7 @@
 
       <div class="filebar">
         <input type="file" id="collageFile" accept="image/*">
+        <button class="ghost" id="collageCam">📷 Live camera</button>
         <span class="hint">Pick a single image.</span>
       </div>
 
@@ -599,6 +604,7 @@
 
       <div class="filebar">
         <input type="file" id="vampFile" accept="image/*">
+        <button class="ghost" id="vampCam">📷 Live camera</button>
         <button class="ghost" id="vampReset" disabled>Reset preset</button>
         <span class="hint">Pick a single image.</span>
       </div>
@@ -791,6 +797,7 @@
 
       <div class="filebar">
         <input type="file" id="personFile" accept="image/*">
+        <button class="ghost" id="personCam">📷 Live camera</button>
         <span class="hint">Pick a single photo containing a person.</span>
       </div>
 
@@ -1196,6 +1203,75 @@ const FillFx=(function(){
   }
   return {fillDirection, fillDiagonal};
 })();
+
+/* ------------------------------------------------------------------ */
+/*  Live camera (shared). One active consumer at a time; feeds each    */
+/*  animation frame — mirrored and downscaled — to an onFrame(canvas). */
+/* ------------------------------------------------------------------ */
+const CameraFx=(function(){
+  let stream=null, video=null, raf=0, frameCanvas=null, cb=null, maxSide=640, running=false, onStopped=null;
+  function ensureVideo(){
+    if(!video){
+      video=document.createElement('video');
+      video.muted=true; video.playsInline=true; video.setAttribute('playsinline','');
+    }
+    return video;
+  }
+  function loop(){
+    if(!running) return;
+    raf=requestAnimationFrame(loop);
+    const v=video;
+    if(!v || v.readyState<2 || !v.videoWidth) return;
+    const scale=Math.min(1, maxSide/Math.max(v.videoWidth,v.videoHeight));
+    const w=Math.max(2,Math.round(v.videoWidth*scale)), h=Math.max(2,Math.round(v.videoHeight*scale));
+    if(frameCanvas.width!==w||frameCanvas.height!==h){ frameCanvas.width=w; frameCanvas.height=h; }
+    const ctx=frameCanvas.getContext('2d');
+    ctx.save(); ctx.translate(w,0); ctx.scale(-1,1); ctx.drawImage(v,0,0,w,h); ctx.restore();  // mirror (selfie)
+    try{ if(cb) cb(frameCanvas,w,h); }catch(e){}
+  }
+  async function start(onFrame, opts){
+    stop();
+    opts=opts||{};
+    maxSide=opts.maxSide||640; cb=onFrame; onStopped=opts.onStopped||null;
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
+      throw new Error('camera not supported by this browser (needs HTTPS)');
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:opts.facingMode||'user'}, audio:false});
+    const v=ensureVideo(); v.srcObject=stream;
+    try{ await v.play(); }catch(e){}
+    frameCanvas=document.createElement('canvas');
+    running=true; loop();
+  }
+  function stop(){
+    running=false;
+    if(raf){ cancelAnimationFrame(raf); raf=0; }
+    if(stream){ stream.getTracks().forEach(t=>{ try{t.stop();}catch(e){} }); stream=null; }
+    if(video){ video.srcObject=null; }
+    cb=null;
+    const os=onStopped; onStopped=null;
+    if(os){ try{ os(); }catch(e){} }
+  }
+  return {start, stop, active:()=>running};
+})();
+
+// Wire a toggle button to run the live camera into onFrame(frameCanvas,w,h),
+// hiding the elements in opts.hideEls while live. Only one camera runs at a time.
+function attachCamera(btn, onFrame, opts){
+  opts=opts||{};
+  let on=false;
+  function ui(state){
+    on=state;
+    btn.textContent = state ? '⏹ Stop camera' : '📷 Live camera';
+    btn.classList.toggle('cam-on', state);
+    (opts.hideEls||[]).forEach(el=>{ if(el) el.hidden=state; });
+    if(state){ if(opts.onStart) opts.onStart(); } else { if(opts.onStop) opts.onStop(); }
+  }
+  btn.addEventListener('click', async ()=>{
+    if(on){ CameraFx.stop(); return; }   // stop() triggers onStopped -> ui(false)
+    ui(true);
+    try{ await CameraFx.start(onFrame, {maxSide:opts.maxSide||640, onStopped:()=>ui(false)}); }
+    catch(err){ ui(false); alert('Camera unavailable: '+((err&&err.message)||err)); }
+  });
+}
 
 /* ================================================================== */
 /*  BOXES                                                             */
@@ -1649,6 +1725,14 @@ const FillFx=(function(){
     outCanvas.getContext('2d').putImageData(baseData,0,0);
   });
   dlBtn.addEventListener('click',()=>download(outCanvas,'fill.png'));
+
+  // Live camera: run the fill on each frame straight into the result canvas.
+  attachCamera(document.getElementById('fillCam'), (frame,w,h)=>{
+    W=w; H=h;
+    baseData=frame.getContext('2d').getImageData(0,0,w,h);
+    if(outCanvas.width!==w||outCanvas.height!==h){ outCanvas.width=w; outCanvas.height=h; }
+    render();
+  }, {hideEls:[inCanvas.closest('.canvas-box')]});
 })();
 
 /* ================================================================== */
@@ -1690,6 +1774,14 @@ const FillFx=(function(){
   amt.addEventListener('input',()=>{amtVal.textContent=amt.value+'%';render();});
   [chA,chB,axis,mode].forEach(el=>el.addEventListener('change',render));
   dlBtn.addEventListener('click',()=>download(outCanvas,'chroma_shift.png'));
+
+  // Live camera: chroma-shift each frame straight into the result canvas.
+  attachCamera(document.getElementById('chromaCam'), (frame,w,h)=>{
+    W=w; H=h;
+    baseData=frame.getContext('2d').getImageData(0,0,w,h);
+    if(outCanvas.width!==w||outCanvas.height!==h){ outCanvas.width=w; outCanvas.height=h; }
+    render();
+  }, {hideEls:[inCanvas.closest('.canvas-box')]});
 })();
 
 /* ================================================================== */
@@ -1915,6 +2007,14 @@ const FillFx=(function(){
     // Save the currently visible preview frame as PNG (iOS-safe via download()).
     download(aOut,sourceName+'_collage_frame.png');
   });
+
+  // Live camera: kaleidoscope each frame straight into the collage canvas.
+  attachCamera(document.getElementById('collageCam'), (frame,w,h)=>{
+    const coll=renderCollage(frame, parseInt(secSlider.value,10)||20);
+    if(outCanvas.width!==w||outCanvas.height!==h){ outCanvas.width=w; outCanvas.height=h; }
+    outCanvas.getContext('2d').drawImage(coll,0,0,w,h);
+    dlBtn.disabled=false;
+  }, {hideEls:[inCanvas.closest('.canvas-box')]});
 })();
 
 /* ================================================================== */
@@ -2588,6 +2688,15 @@ const FillFx=(function(){
     },frameMs);
   });
   animFrame.addEventListener('click',()=>download(animOut,sourceName+'_vampire_frame.png'));
+
+  // Live camera: run the full vampire pipeline on each frame (small size — it's heavy).
+  attachCamera(document.getElementById('vampCam'), (frame,w,h)=>{
+    const fd=frame.getContext('2d').getImageData(0,0,w,h);
+    const out=process(toRgb(fd),w,h,readPreset());
+    if(outCanvas.width!==w||outCanvas.height!==h){ outCanvas.width=w; outCanvas.height=h; }
+    outCanvas.getContext('2d').putImageData(toImageData(out,w,h,fd),0,0);
+    dlBtn.disabled=false;
+  }, {maxSide:360, hideEls:[inCanvas.closest('.canvas-box')]});
 
   syncParamDefaults();
 })();
@@ -3273,6 +3382,29 @@ const FillFx=(function(){
     const iv=setInterval(()=>{ aDrawAt(pos); pos++; if(pos>=total){ clearInterval(iv); setTimeout(()=>{ try{rec.stop();}catch(_){} }, frameMs+40); } },frameMs);
   });
   animFrame.addEventListener('click',()=>download(animOut, sourceName+'_'+targetSel.value+'_collage_frame.png'));
+
+  // Live camera: segment + composite the current operation on each frame.
+  // MediaPipe is async, so skip incoming frames while a segmentation is in flight.
+  let liveBusy=false;
+  attachCamera(document.getElementById('personCam'), (frame,w,h)=>{
+    if(liveBusy) return;
+    liveBusy=true;
+    W=w; H=h;
+    if(inCanvas.width!==w||inCanvas.height!==h){ inCanvas.width=w; inCanvas.height=h; }
+    inCanvas.getContext('2d').drawImage(frame,0,0);
+    baseData=inCanvas.getContext('2d').getImageData(0,0,w,h);
+    if(outCanvas.width!==w||outCanvas.height!==h){ outCanvas.width=w; outCanvas.height=h; }
+    // the frame changed, so every cached operation source is stale
+    collageData=null; collageSections=-1; chromaData=null; chromaKey='';
+    lowresData=null; lowresKey=-1; fillData=null; fillKey=''; blurPixels=null; blurKey=-1;
+    ensureModel().then(s=>{ pendingResolve=()=>{ renderResult(); liveBusy=false; }; return s.send({image:inCanvas}); })
+      .catch(()=>{ liveBusy=false; });
+  }, {
+    maxSide:480,
+    hideEls:[inCanvas.closest('.canvas-box')],
+    onStart:()=>{ status.textContent='Live camera — segmenting each frame…'; },
+    onStop:()=>{ liveBusy=false; status.textContent='Live camera stopped.'; }
+  });
 })();
 </script>
 </body>
