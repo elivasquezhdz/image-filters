@@ -784,9 +784,9 @@
         rel="noopener">MediaPipe Selfie Segmentation</a>), then lets you operate on either the
         <strong>person</strong> or the <strong>background</strong> — <strong>invert its colors</strong>,
         run it through the <strong>4-Way Collage</strong> kaleidoscope, apply a <strong>Chroma
-        Shift</strong> (RGB glitch), or drop it to <strong>low resolution</strong> (pixelate) — while the
-        other part stays untouched. The model runs entirely in your browser — your image is never
-        uploaded.</p>
+        Shift</strong> (RGB glitch), drop it to <strong>low resolution</strong> (pixelate), or smear it
+        with a <strong>Horizontal / Vertical Fill</strong> — while the other part stays untouched. The
+        model runs entirely in your browser — your image is never uploaded.</p>
 
       <div class="filebar">
         <input type="file" id="personFile" accept="image/*">
@@ -808,7 +808,21 @@
             <option value="collage">4-Way Collage</option>
             <option value="chroma">Chroma Shift</option>
             <option value="lowres">Low resolution</option>
+            <option value="fill">Horizontal / Vertical Fill</option>
           </select>
+        </div>
+        <div class="control" id="personFillDirCtl" style="display:none">
+          <label>Fill direction</label>
+          <select id="personFillDir">
+            <option value="left">Left</option>
+            <option value="right">Right</option>
+            <option value="up">Up</option>
+            <option value="down">Down</option>
+          </select>
+        </div>
+        <div class="control" id="personFillPctCtl" style="display:none">
+          <label>Fill start · <span class="val" id="personFillPctVal">30%</span></label>
+          <input type="range" id="personFillPct" min="0" max="100" step="1" value="30">
         </div>
         <div class="control" id="personLowresCtl" style="display:none">
           <label>Pixel size · <span class="val" id="personLowresVal">12 px</span></label>
@@ -1117,6 +1131,64 @@ const ChromaFx=(function(){
     return out;
   }
   return {shift};
+})();
+
+/* ------------------------------------------------------------------ */
+/*  Horizontal / Vertical Fill core (shared by the Fill and Person    */
+/*  tabs). Replicates an edge row/column to fill the rest.            */
+/* ------------------------------------------------------------------ */
+const FillFx=(function(){
+  function fillDirection(srcData,w,h,direction,percent){
+    const out=new ImageData(new Uint8ClampedArray(srcData.data),w,h);
+    const d=out.data;
+    percent=Math.max(0,Math.min(1,percent));
+    const idx=(x,y)=>(y*w+x)*4;
+    function copyCol(from,to){
+      for(let y=0;y<h;y++){ const s=idx(from,y),t=idx(to,y);
+        d[t]=d[s];d[t+1]=d[s+1];d[t+2]=d[s+2];d[t+3]=d[s+3]; }
+    }
+    function copyRow(from,to){
+      for(let x=0;x<w;x++){ const s=idx(x,from),t=idx(x,to);
+        d[t]=d[s];d[t+1]=d[s+1];d[t+2]=d[s+2];d[t+3]=d[s+3]; }
+    }
+    if(direction==='left'){
+      const fw=Math.floor(w*percent), src=Math.min(fw,w-1);
+      for(let x=0;x<fw;x++) copyCol(src,x);
+    }else if(direction==='right'){
+      const fw=Math.floor(w*percent), src=Math.max(w-fw-1,0);
+      for(let x=w-fw;x<w;x++) copyCol(src,x);
+    }else if(direction==='up'){
+      const fh=Math.floor(h*percent), src=Math.min(fh,h-1);
+      for(let y=0;y<fh;y++) copyRow(src,y);
+    }else if(direction==='down'){
+      const fh=Math.floor(h*percent), src=Math.max(h-fh-1,0);
+      for(let y=h-fh;y<h;y++) copyRow(src,y);
+    }
+    return out;
+  }
+  // Diagonal fill: replicate the pixels of a diagonal boundary line across the
+  // half-plane on its "fill side" (anchor at (xPct,yPct), direction (1, slope)).
+  function fillDiagonal(srcData,w,h,xPct,yPct,slope){
+    const out=new ImageData(new Uint8ClampedArray(srcData.data),w,h);
+    const s=srcData.data, d=out.data;
+    const ax=w*xPct, ay=h*yPct;
+    let ux=1, uy=slope;
+    const len=Math.hypot(ux,uy)||1; ux/=len; uy/=len; // unit smear direction
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const t=(x-ax)*ux+(y-ay)*uy; // signed distance along the smear direction
+        if(t>0){
+          let fx=Math.round(x-t*ux), fy=Math.round(y-t*uy); // foot on the boundary
+          if(fx<0)fx=0; else if(fx>w-1)fx=w-1;
+          if(fy<0)fy=0; else if(fy>h-1)fy=h-1;
+          const si=(fy*w+fx)*4, ti=(y*w+x)*4;
+          d[ti]=s[si]; d[ti+1]=s[si+1]; d[ti+2]=s[si+2]; d[ti+3]=s[si+3];
+        }
+      }
+    }
+    return out;
+  }
+  return {fillDirection, fillDiagonal};
 })();
 
 /* ================================================================== */
@@ -1517,59 +1589,7 @@ const ChromaFx=(function(){
   let baseData=null, W=0, H=0;
 
   // core: fill one direction on an ImageData (mutates copy, returns new)
-  function fillDirection(srcData,w,h,direction,percent){
-    const out=new ImageData(new Uint8ClampedArray(srcData.data),w,h);
-    const d=out.data;
-    percent=Math.max(0,Math.min(1,percent));
-    const idx=(x,y)=>(y*w+x)*4;
-    function copyCol(from,to){
-      for(let y=0;y<h;y++){ const s=idx(from,y),t=idx(to,y);
-        d[t]=d[s];d[t+1]=d[s+1];d[t+2]=d[s+2];d[t+3]=d[s+3]; }
-    }
-    function copyRow(from,to){
-      for(let x=0;x<w;x++){ const s=idx(x,from),t=idx(x,to);
-        d[t]=d[s];d[t+1]=d[s+1];d[t+2]=d[s+2];d[t+3]=d[s+3]; }
-    }
-    if(direction==='left'){
-      const fw=Math.floor(w*percent), src=Math.min(fw,w-1);
-      for(let x=0;x<fw;x++) copyCol(src,x);
-    }else if(direction==='right'){
-      const fw=Math.floor(w*percent), src=Math.max(w-fw-1,0);
-      for(let x=w-fw;x<w;x++) copyCol(src,x);
-    }else if(direction==='up'){
-      const fh=Math.floor(h*percent), src=Math.min(fh,h-1);
-      for(let y=0;y<fh;y++) copyRow(src,y);
-    }else if(direction==='down'){
-      const fh=Math.floor(h*percent), src=Math.max(h-fh-1,0);
-      for(let y=h-fh;y<h;y++) copyRow(src,y);
-    }
-    return out;
-  }
-
-  // diagonal fill: replicate the pixels of a diagonal boundary line across the
-  // half-plane on its "fill side". The boundary line passes through the anchor
-  // point (xPct,yPct) and has direction (1, slope); every pixel on the fill side
-  // takes the colour of the boundary pixel at the foot of its perpendicular.
-  function fillDiagonal(srcData,w,h,xPct,yPct,slope){
-    const out=new ImageData(new Uint8ClampedArray(srcData.data),w,h);
-    const s=srcData.data, d=out.data;
-    const ax=w*xPct, ay=h*yPct;
-    let ux=1, uy=slope;
-    const len=Math.hypot(ux,uy)||1; ux/=len; uy/=len; // unit smear direction
-    for(let y=0;y<h;y++){
-      for(let x=0;x<w;x++){
-        const t=(x-ax)*ux+(y-ay)*uy; // signed distance along the smear direction
-        if(t>0){
-          let fx=Math.round(x-t*ux), fy=Math.round(y-t*uy); // foot on the boundary
-          if(fx<0)fx=0; else if(fx>w-1)fx=w-1;
-          if(fy<0)fy=0; else if(fy>h-1)fy=h-1;
-          const si=(fy*w+fx)*4, ti=(y*w+x)*4;
-          d[ti]=s[si]; d[ti+1]=s[si+1]; d[ti+2]=s[si+2]; d[ti+3]=s[si+3];
-        }
-      }
-    }
-    return out;
-  }
+  const fillDirection=FillFx.fillDirection, fillDiagonal=FillFx.fillDiagonal;  // shared core
 
   function updateFillUI(){
     const diag = dir.value==='diagonal';
@@ -2752,6 +2772,11 @@ const ChromaFx=(function(){
   const lowres=document.getElementById('personLowres');
   const lowresVal=document.getElementById('personLowresVal');
   const lowresCtl=document.getElementById('personLowresCtl');
+  const fillDir=document.getElementById('personFillDir');
+  const fillDirCtl=document.getElementById('personFillDirCtl');
+  const fillPct=document.getElementById('personFillPct');
+  const fillPctVal=document.getElementById('personFillPctVal');
+  const fillPctCtl=document.getElementById('personFillPctCtl');
   const thr=document.getElementById('personThr');
   const thrVal=document.getElementById('personThrVal');
   const grow=document.getElementById('personGrow');
@@ -2773,6 +2798,7 @@ const ChromaFx=(function(){
   let collageData=null, collageSections=-1;   // cached 4-way collage pixels at W×H
   let chromaData=null, chromaKey='';           // cached chroma-shift pixels at W×H
   let lowresData=null, lowresKey=-1;           // cached pixelated pixels at W×H
+  let fillData=null, fillKey='';               // cached fill pixels at W×H
   let sourceName='image', busy=false, rebuildScheduled=false;
 
   thrVal.textContent=parseFloat(thr.value).toFixed(2);
@@ -2781,6 +2807,7 @@ const ChromaFx=(function(){
   sectionsVal.textContent=sections.value;
   chromaAmtVal.textContent=chromaAmt.value+'%';
   lowresVal.textContent=lowres.value+' px';
+  fillPctVal.textContent=fillPct.value+'%';
   thr.addEventListener('input',()=>{ thrVal.textContent=parseFloat(thr.value).toFixed(2); scheduleRebuild(); });
   grow.addEventListener('input',()=>{ growVal.textContent=(grow.value>0?'+':'')+grow.value+' px'; scheduleRebuild(); });
   feather.addEventListener('input',()=>{ featherVal.textContent=feather.value+' px'; scheduleRebuild(); });
@@ -2788,6 +2815,8 @@ const ChromaFx=(function(){
   chromaAmt.addEventListener('input',()=>{ chromaAmtVal.textContent=chromaAmt.value+'%'; if(procAlpha) renderResult(); });
   chromaAxis.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
   lowres.addEventListener('input',()=>{ lowresVal.textContent=lowres.value+' px'; if(procAlpha) renderResult(); });
+  fillDir.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
+  fillPct.addEventListener('input',()=>{ fillPctVal.textContent=fillPct.value+'%'; if(procAlpha) renderResult(); });
   targetSel.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
   opSel.addEventListener('change',()=>{ syncOpUI(); if(procAlpha) renderResult(); });
   showMask.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
@@ -2798,6 +2827,8 @@ const ChromaFx=(function(){
     chromaAmtCtl.style.display  = op==='chroma'  ? 'flex' : 'none';
     chromaAxisCtl.style.display = op==='chroma'  ? 'flex' : 'none';
     lowresCtl.style.display     = op==='lowres'  ? 'flex' : 'none';
+    fillDirCtl.style.display    = op==='fill'    ? 'flex' : 'none';
+    fillPctCtl.style.display    = op==='fill'    ? 'flex' : 'none';
   }
   syncOpUI();
 
@@ -2834,12 +2865,21 @@ const ChromaFx=(function(){
     lowresKey=block;
     return lowresData;
   }
+  // Horizontal / vertical fill of the current image, cached by direction+start%.
+  function getFillData(){
+    const key=fillDir.value+'_'+fillPct.value;
+    if(fillData && fillKey===key) return fillData;
+    fillData=FillFx.fillDirection(baseData,W,H,fillDir.value,parseFloat(fillPct.value)/100).data;
+    fillKey=key;
+    return fillData;
+  }
   // The "modified colour" source for the selected region (null = invert, handled inline).
   function getModData(){
     const op=opSel.value;
     if(op==='collage') return getCollageData(parseInt(sections.value,10)||20);
     if(op==='chroma')  return getChromaData();
     if(op==='lowres')  return getLowresData(parseInt(lowres.value,10)||12);
+    if(op==='fill')    return getFillData();
     return null;
   }
 
@@ -2997,7 +3037,7 @@ const ChromaFx=(function(){
     outCanvas.width=W; outCanvas.height=H;
     outCanvas.getContext('2d').drawImage(c,0,0);
     rawMask=null; procAlpha=null; collageData=null; collageSections=-1; chromaData=null; chromaKey='';
-    lowresData=null; lowresKey=-1;
+    lowresData=null; lowresKey=-1; fillData=null; fillKey='';
     dlBtn.disabled=true; animResetForNewImage();
     busy=true; status.textContent='Loading model & detecting the person…';
     try{
