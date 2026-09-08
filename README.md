@@ -83,6 +83,8 @@ Parámetros:
 - **Eje:** horizontal o vertical.
 - **Desplazamiento:** porcentaje del ancho de la imagen.
 - **Sentido:** opuestos (uno hacia cada lado) o el mismo.
+- **Iteraciones (nuevo):** aplica el desplazamiento **recursivamente sobre su propia
+  salida** el número de veces indicado (1–20), acumulando el efecto (estelas / rastros).
 
 ### 4. 🪞 4-Way Collage
 Toma **una sola imagen** y construye un **mosaico 2×2 en espejo** (original, volteo
@@ -159,7 +161,8 @@ Parámetros:
   (efecto caleidoscopio), aplicar un **Chroma Shift** (glitch RGB), bajarla a **baja
   resolución** (pixelado), difuminarla con un **Horizontal / Vertical Fill** o aplicarle un
   **desenfoque (Blur)** — p. ej. un fondo tipo retrato; la otra parte queda intacta. El
-  collage muestra un control de **secciones** (2–60), el chroma **desplazamiento** y **eje**,
+  collage muestra un control de **secciones** (2–60), el chroma **desplazamiento**, **eje** e
+  **iteraciones** (recursivo, 1–20),
   la baja resolución un **tamaño de píxel**, el fill una **dirección** y un **inicio del
   relleno (%)**, y el blur un **radio (px)**.
 - **Umbral de máscara (threshold):** cuánta parte de la máscara suave cuenta como «persona».
