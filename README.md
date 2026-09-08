@@ -187,6 +187,20 @@ El modelo (~6 MB) se descarga solo la **primera vez** que se usa esta pestaña. 
 navegador con **WebAssembly SIMD** (todos los navegadores actuales). Las imágenes grandes se
 procesan hasta 1600 px en el lado largo.
 
+### 8. 🎛️ Channel Merge
+Combina **hasta 6 imágenes** (subidas o **capturadas con la cámara**), donde cada una se
+convierte a brillo (luminancia) y se tiñe con un color según su posición, sumándose todas
+(mezcla aditiva de luz): 1 → **rojo**, 2 → **verde**, 3 → **azul**, 4 → **cian**, 5 →
+**amarillo**, 6 → **magenta**. Con 3 imágenes es un tricromo R/G/B clásico; con capturas
+sucesivas (moviéndose entre tomas) da el efecto tipo *Harris shutter*.
+
+Parámetros:
+- **Cámara:** enciende la vista en vivo y pulsa **Capture frame** para añadir tomas (hasta 6);
+  **Clear** vacía el conjunto.
+- **Ajuste de tamaño (fit):** al tamaño de la primera imagen o al mínimo común.
+
+La cámara requiere permiso y **HTTPS**. Todo corre localmente.
+
 ## Script de Python: filtro vampire
 
 `vampire_filter.py` aplica el preset «vampire» a una imagen o a una carpeta (lote).
