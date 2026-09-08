@@ -134,6 +134,10 @@
   }
   .thumbs{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
   .thumbs img{height:64px;border-radius:8px;border:1px solid var(--border)}
+  .chan-layer{display:flex;flex-direction:column;gap:5px;width:120px}
+  .chan-layer img{height:76px;width:100%;object-fit:cover;border-radius:8px}
+  .chan-layer label{font-size:.72rem;font-weight:600;letter-spacing:.3px}
+  .chan-layer input[type=range]{width:100%}
   .hint{color:var(--muted);font-size:.82rem;margin-top:10px}
   .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
   .badge{display:inline-block;background:var(--panel-2);border:1px solid var(--border);
@@ -3710,17 +3714,28 @@ function attachCamera(btn, onFrame, opts){
   const COLNAMES=['Red','Green','Blue','Cyan','Yellow','Magenta'];
   const COLCSS=['#ff5b5b','#5bff5b','#6e8bff','#37d5d5','#e6e64b','#ff6bff'];
   const dimW=s=>s.naturalWidth||s.width, dimH=s=>s.naturalHeight||s.height;
+  const DEF_STRENGTH=30;
   let sources=[];                 // up to 6 <img> / <canvas>, in colour order
+  let strengths=[];               // per-layer strength % (default 30)
+  let hasMerged=false;
   let camActive=false, latestFrame=null;
 
   function renderThumbs(){
     thumbs.innerHTML='';
     sources.forEach((src,i)=>{
+      const card=document.createElement('div'); card.className='chan-layer';
       const t=document.createElement('img');
       t.src = src.tagName==='IMG' ? src.src : src.toDataURL('image/png');
       t.style.border='2px solid '+COLCSS[i];
       t.title=(i+1)+' → '+COLNAMES[i];
-      thumbs.appendChild(t);
+      const lab=document.createElement('label'); lab.style.color=COLCSS[i];
+      const val=document.createElement('span'); val.textContent=strengths[i]+'%';
+      lab.textContent=COLNAMES[i]+' · '; lab.appendChild(val);
+      const sl=document.createElement('input');
+      sl.type='range'; sl.min=0; sl.max=100; sl.step=1; sl.value=strengths[i];
+      sl.addEventListener('input',()=>{ strengths[i]=parseInt(sl.value,10)||0; val.textContent=strengths[i]+'%'; if(hasMerged) doMerge(); });
+      card.appendChild(t); card.appendChild(lab); card.appendChild(sl);
+      thumbs.appendChild(card);
     });
     clearBtn.disabled = sources.length===0;
     runBtn.disabled   = sources.length<1;
@@ -3730,11 +3745,11 @@ function attachCamera(btn, onFrame, opts){
     const files=[...e.target.files];
     for(const f of files){
       if(sources.length>=MAX){ alert('Up to '+MAX+' images; the extra files were ignored.'); break; }
-      sources.push(await loadImage(f));
+      sources.push(await loadImage(f)); strengths.push(DEF_STRENGTH);
     }
     renderThumbs();
   });
-  clearBtn.addEventListener('click',()=>{ sources=[]; renderThumbs(); });
+  clearBtn.addEventListener('click',()=>{ sources=[]; strengths=[]; hasMerged=false; renderThumbs(); });
 
   /* ---- camera capture (up to 6 stills) ---- */
   function setCam(on){
@@ -3760,12 +3775,12 @@ function attachCamera(btn, onFrame, opts){
     if(!latestFrame || sources.length>=MAX) return;
     const c=document.createElement('canvas'); c.width=latestFrame.width; c.height=latestFrame.height;
     c.getContext('2d').drawImage(latestFrame,0,0);
-    sources.push(c); renderThumbs();
+    sources.push(c); strengths.push(DEF_STRENGTH); renderThumbs();
     if(sources.length>=MAX) CameraFx.stop();   // all 6 slots filled — stop the camera
   });
 
-  /* ---- merge: sum luminance × colour per layer ---- */
-  runBtn.addEventListener('click',()=>{
+  /* ---- merge: sum (luminance × strength) × colour per layer ---- */
+  function doMerge(){
     const n=sources.length; if(n<1) return;
     let W,H;
     if(fitSel.value==='min'){ W=Math.min(...sources.map(dimW)); H=Math.min(...sources.map(dimH)); }
@@ -3778,7 +3793,8 @@ function attachCamera(btn, onFrame, opts){
       tctx.clearRect(0,0,W,H);
       tctx.drawImage(sources[s],0,0,W,H);
       const d=tctx.getImageData(0,0,W,H).data;
-      const cr=COLORS[s][0], cg=COLORS[s][1], cb=COLORS[s][2];
+      const w=(strengths[s]||0)/100;                       // per-image strength
+      const cr=COLORS[s][0]*w, cg=COLORS[s][1]*w, cb=COLORS[s][2]*w;
       for(let i=0,p=0;i<W*H;i++,p+=4){
         const g=0.2126*d[p]+0.7152*d[p+1]+0.0722*d[p+2];   // luminance of this image
         const k=i*3; acc[k]+=g*cr; acc[k+1]+=g*cg; acc[k+2]+=g*cb;
@@ -3788,8 +3804,9 @@ function attachCamera(btn, onFrame, opts){
     for(let i=0,p=0;i<W*H;i++,p+=4){ const k=i*3; od[p]=acc[k]; od[p+1]=acc[k+1]; od[p+2]=acc[k+2]; od[p+3]=255; }
     outCanvas.width=W; outCanvas.height=H;
     outCanvas.getContext('2d').putImageData(id,0,0);
-    dlBtn.disabled=false;
-  });
+    dlBtn.disabled=false; hasMerged=true;
+  }
+  runBtn.addEventListener('click',doMerge);
 
   dlBtn.addEventListener('click',()=>download(outCanvas,'channel_merge.png'));
 })();

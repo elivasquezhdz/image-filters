@@ -197,6 +197,8 @@ sucesivas (moviéndose entre tomas) da el efecto tipo *Harris shutter*.
 Parámetros:
 - **Cámara:** enciende la vista en vivo y pulsa **Capture frame** para añadir tomas (hasta 6);
   **Clear** vacía el conjunto.
+- **Fuerza por imagen:** cada capa tiene un deslizador (0–100 %, por defecto **30 %**) que
+  regula cuánto aporta ese color a la mezcla; ajustarlo recombina el resultado al instante.
 - **Ajuste de tamaño (fit):** al tamaño de la primera imagen o al mínimo común.
 
 La cámara requiere permiso y **HTTPS**. Todo corre localmente.
