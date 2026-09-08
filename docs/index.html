@@ -488,6 +488,10 @@
             <option value="same">Same direction</option>
           </select>
         </div>
+        <div class="control">
+          <label>Iterations · <span class="val" id="chromaIterVal">1</span></label>
+          <input type="range" id="chromaIter" min="1" max="20" step="1" value="1">
+        </div>
       </div>
 
       <div class="canvas-wrap">
@@ -855,6 +859,10 @@
             <option value="x">Horizontal</option>
             <option value="y">Vertical</option>
           </select>
+        </div>
+        <div class="control" id="personChromaIterCtl" style="display:none">
+          <label>Chroma iterations · <span class="val" id="personChromaIterVal">1</span></label>
+          <input type="range" id="personChromaIter" min="1" max="20" step="1" value="1">
         </div>
         <div class="control">
           <label>Mask threshold · <span class="val" id="personThrVal">0.50</span></label>
@@ -1748,6 +1756,8 @@ function attachCamera(btn, onFrame, opts){
   const amt=document.getElementById('chromaAmt');
   const amtVal=document.getElementById('chromaAmtVal');
   const mode=document.getElementById('chromaMode');
+  const iter=document.getElementById('chromaIter');
+  const iterVal=document.getElementById('chromaIterVal');
   const dlBtn=document.getElementById('chromaDl');
   let baseData=null, W=0, H=0;
 
@@ -1755,7 +1765,10 @@ function attachCamera(btn, onFrame, opts){
     if(!baseData) return;
     const shiftPx=Math.round(W*parseFloat(amt.value)/100);
     const a=parseInt(chA.value,10), b=parseInt(chB.value,10);
-    const out=ChromaFx.shift(baseData,W,H,a,b,axis.value,shiftPx,mode.value);  // shared core
+    const iters=Math.max(1,parseInt(iter.value,10)||1);
+    let out=baseData;
+    for(let i=0;i<iters;i++)   // run the shift recursively on its own output
+      out=ChromaFx.shift(out,W,H,a,b,axis.value,shiftPx,mode.value);
     outCanvas.getContext('2d').putImageData(out,0,0);
     dlBtn.disabled=false;
   }
@@ -1772,6 +1785,7 @@ function attachCamera(btn, onFrame, opts){
   });
 
   amt.addEventListener('input',()=>{amtVal.textContent=amt.value+'%';render();});
+  iter.addEventListener('input',()=>{iterVal.textContent=iter.value;render();});
   [chA,chB,axis,mode].forEach(el=>el.addEventListener('change',render));
   dlBtn.addEventListener('click',()=>download(outCanvas,'chroma_shift.png'));
 
@@ -2884,6 +2898,9 @@ function attachCamera(btn, onFrame, opts){
   const chromaAmtCtl=document.getElementById('personChromaAmtCtl');
   const chromaAxis=document.getElementById('personChromaAxis');
   const chromaAxisCtl=document.getElementById('personChromaAxisCtl');
+  const chromaIter=document.getElementById('personChromaIter');
+  const chromaIterVal=document.getElementById('personChromaIterVal');
+  const chromaIterCtl=document.getElementById('personChromaIterCtl');
   const lowres=document.getElementById('personLowres');
   const lowresVal=document.getElementById('personLowresVal');
   const lowresCtl=document.getElementById('personLowresCtl');
@@ -2934,6 +2951,7 @@ function attachCamera(btn, onFrame, opts){
   sections.addEventListener('input',()=>{ sectionsVal.textContent=sections.value; if(procAlpha) renderResult(); });
   chromaAmt.addEventListener('input',()=>{ chromaAmtVal.textContent=chromaAmt.value+'%'; if(procAlpha) renderResult(); });
   chromaAxis.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
+  chromaIter.addEventListener('input',()=>{ chromaIterVal.textContent=chromaIter.value; if(procAlpha) renderResult(); });
   lowres.addEventListener('input',()=>{ lowresVal.textContent=lowres.value+' px'; if(procAlpha) renderResult(); });
   fillDir.addEventListener('change',()=>{ if(procAlpha) renderResult(); });
   fillPct.addEventListener('input',()=>{ fillPctVal.textContent=fillPct.value+'%'; if(procAlpha) renderResult(); });
@@ -2947,6 +2965,7 @@ function attachCamera(btn, onFrame, opts){
     sectionsCtl.style.display   = op==='collage' ? 'flex' : 'none';
     chromaAmtCtl.style.display  = op==='chroma'  ? 'flex' : 'none';
     chromaAxisCtl.style.display = op==='chroma'  ? 'flex' : 'none';
+    chromaIterCtl.style.display = op==='chroma'  ? 'flex' : 'none';
     lowresCtl.style.display     = op==='lowres'  ? 'flex' : 'none';
     fillDirCtl.style.display    = op==='fill'    ? 'flex' : 'none';
     fillPctCtl.style.display    = op==='fill'    ? 'flex' : 'none';
@@ -2967,12 +2986,16 @@ function attachCamera(btn, onFrame, opts){
     collageSections=n;
     return collageData;
   }
-  // Chroma shift (classic red/blue opposite) of the current image, cached by amount+axis.
+  // Chroma shift (classic red/blue opposite), run recursively on its own output.
+  // Cached by amount + axis + iterations.
   function getChromaData(){
     const shiftPx=Math.round(W*parseFloat(chromaAmt.value)/100);
-    const key=chromaAxis.value+'_'+shiftPx;
+    const iters=Math.max(1,parseInt(chromaIter.value,10)||1);
+    const key=chromaAxis.value+'_'+shiftPx+'_'+iters;
     if(chromaData && chromaKey===key) return chromaData;
-    chromaData=ChromaFx.shift(baseData,W,H,2,0,chromaAxis.value,shiftPx,'opposite').data;
+    let out=baseData;
+    for(let i=0;i<iters;i++) out=ChromaFx.shift(out,W,H,2,0,chromaAxis.value,shiftPx,'opposite');
+    chromaData=out.data;
     chromaKey=key;
     return chromaData;
   }
