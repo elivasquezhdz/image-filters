@@ -86,6 +86,12 @@ Parámetros:
 - **Iteraciones (nuevo):** aplica el desplazamiento **recursivamente sobre su propia
   salida** el número de veces indicado (1–20), acumulando el efecto (estelas / rastros).
 
+Incluye además una **animación**: recorre el parámetro **Iterations** (profundidad
+recursiva) o **Shift** (%) desde un inicio hasta un fin a lo largo de un número de cuadros y
+la reproduce; orden forward/reverse con bucle *ping-pong*, exportable a **vídeo**
+(`MediaRecorder`, prefiriendo MP4) o a **cuadro PNG**. Los cuadros se renderizan a tamaño
+reducido (lado largo ≤ 720 px, hasta 60 cuadros).
+
 ### 4. 🪞 4-Way Collage
 Toma **una sola imagen** y construye un **mosaico 2×2 en espejo** (original, volteo
 horizontal, volteo vertical y ambos). Después divide ese mosaico en **secciones** que
