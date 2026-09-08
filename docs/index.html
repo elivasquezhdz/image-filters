@@ -507,6 +507,73 @@
       </div>
       <p class="hint">If you pick the same channel for A and B, only that channel is shifted.</p>
     </div>
+
+    <div class="card">
+      <h2>Chroma Shift Animation</h2>
+      <p class="desc">Sweep the <strong>Iterations</strong> (recursive depth) or the <strong>Shift</strong>
+        amount from a start to an end value and play it back as a video. Uses the channels, axis and
+        direction set above; press <strong>Generate</strong> after loading an image.</p>
+
+      <div class="controls">
+        <div class="control">
+          <label>Parameter</label>
+          <select id="chromaAnimParam">
+            <option value="iter">Iterations (recursive)</option>
+            <option value="amt">Shift (%)</option>
+          </select>
+        </div>
+        <div class="control">
+          <label>Start · <span class="val" id="chromaAnimStartVal">1</span></label>
+          <input type="number" id="chromaAnimStart" value="1" step="1">
+        </div>
+        <div class="control">
+          <label>End · <span class="val" id="chromaAnimEndVal">20</span></label>
+          <input type="number" id="chromaAnimEnd" value="20" step="1">
+        </div>
+        <div class="control">
+          <label>Frames</label>
+          <input type="number" id="chromaAnimFrames" min="2" max="60" value="20">
+        </div>
+        <div class="control">
+          <label>Speed (FPS) · <span class="val" id="chromaAnimFpsVal">12</span></label>
+          <input type="range" id="chromaAnimFps" min="1" max="30" value="12">
+        </div>
+        <div class="control">
+          <label>Order</label>
+          <select id="chromaAnimOrder">
+            <option value="forward">Forward</option>
+            <option value="reverse">Reverse</option>
+          </select>
+        </div>
+        <div class="control">
+          <label>Loop</label>
+          <div class="switch" style="height:38px">
+            <input type="checkbox" id="chromaAnimPing" checked>
+            <label for="chromaAnimPing" style="text-transform:none;color:var(--text)">Ping-pong</label>
+          </div>
+        </div>
+        <div class="control">
+          <button id="chromaAnimRun" disabled>Generate animation</button>
+        </div>
+      </div>
+      <p class="hint" id="chromaAnimHint">Sweeping <strong>Iterations</strong> — 1 to 20.</p>
+
+      <div class="canvas-wrap">
+        <div class="canvas-box">
+          <strong>Animation</strong>
+          <canvas id="chromaAnimOut"></canvas>
+          <div class="row" style="justify-content:center">
+            <button class="ghost" id="chromaAnimPlay" disabled>▶ Play</button>
+            <button class="dl" id="chromaAnimVideo" disabled>⬇ Download video</button>
+            <button class="ghost" id="chromaAnimFrame" disabled>⬇ Frame (PNG)</button>
+          </div>
+          <span class="hint" id="chromaAnimStatus">Upload an image, then press “Generate animation”.</span>
+        </div>
+      </div>
+      <p class="hint">Frames are rendered one by one at a reduced size (long side ≤ 720&nbsp;px, up to 60
+        frames) so the page stays responsive. Video export uses <code>MediaRecorder</code> and prefers
+        <strong>MP4</strong>; if the browser can't record the canvas (e.g. some iOS) use “Frame (PNG)”.</p>
+    </div>
   </section>
 
   <!-- ================= 4-WAY COLLAGE ================= -->
@@ -1782,6 +1849,7 @@ function attachCamera(btn, onFrame, opts){
     ic.drawImage(img,0,0);
     baseData=ic.getImageData(0,0,W,H);
     render();
+    animRun.disabled=false; resetChromaAnim();
   });
 
   amt.addEventListener('input',()=>{amtVal.textContent=amt.value+'%';render();});
@@ -1796,6 +1864,143 @@ function attachCamera(btn, onFrame, opts){
     if(outCanvas.width!==w||outCanvas.height!==h){ outCanvas.width=w; outCanvas.height=h; }
     render();
   }, {hideEls:[inCanvas.closest('.canvas-box')]});
+
+  /* ================= ANIMATION (sweep Iterations or Shift) ================= */
+  const animParam=document.getElementById('chromaAnimParam');
+  const animStart=document.getElementById('chromaAnimStart');
+  const animStartVal=document.getElementById('chromaAnimStartVal');
+  const animEnd=document.getElementById('chromaAnimEnd');
+  const animEndVal=document.getElementById('chromaAnimEndVal');
+  const animFrames=document.getElementById('chromaAnimFrames');
+  const animFps=document.getElementById('chromaAnimFps');
+  const animFpsVal=document.getElementById('chromaAnimFpsVal');
+  const animOrder=document.getElementById('chromaAnimOrder');
+  const animPing=document.getElementById('chromaAnimPing');
+  const animRun=document.getElementById('chromaAnimRun');
+  const animHint=document.getElementById('chromaAnimHint');
+  const animOut=document.getElementById('chromaAnimOut');
+  const animPlay=document.getElementById('chromaAnimPlay');
+  const animVideo=document.getElementById('chromaAnimVideo');
+  const animFrame=document.getElementById('chromaAnimFrame');
+  const animStatus=document.getElementById('chromaAnimStatus');
+  const ANIM_MAX_SIDE=720, ANIM_MAX_FRAMES=60;
+  const PARAM_META={ iter:{start:1,end:20,label:'Iterations'}, amt:{start:0,end:30,label:'Shift (%)'} };
+  let aframes=[], aseq=[], aseqPos=0, aplaying=false, atimer=null, arecording=false;
+
+  animFpsVal.textContent=animFps.value;
+  function syncAnimParam(){
+    const meta=PARAM_META[animParam.value];
+    animStart.value=meta.start; animEnd.value=meta.end;
+    animStartVal.textContent=meta.start; animEndVal.textContent=meta.end;
+    animHint.innerHTML='Sweeping <strong>'+meta.label+'</strong> — '+meta.start+' to '+meta.end+'.';
+  }
+  animParam.addEventListener('change',()=>{ syncAnimParam(); invalidateAnim(); });
+  animStart.addEventListener('input',()=>{ animStartVal.textContent=animStart.value; });
+  animEnd.addEventListener('input',()=>{ animEndVal.textContent=animEnd.value; });
+  animFps.addEventListener('input',()=>{ animFpsVal.textContent=animFps.value; if(aplaying) aStartTimer(); });
+  [animStart,animEnd,animFrames].forEach(el=>el.addEventListener('change',invalidateAnim));
+  [animOrder,animPing].forEach(el=>el.addEventListener('change',()=>{
+    if(!aframes.length) return; const w=aplaying; aPause(); aBuildSeq(); aseqPos=0; aDrawAt(0); if(w) aPlay();
+  }));
+
+  function invalidateAnim(){ if(aframes.length){ resetChromaAnim(); animStatus.textContent='Settings changed — press “Generate animation”.'; } }
+  function resetChromaAnim(){
+    aPause(); aframes=[]; aseq=[]; aseqPos=0;
+    animPlay.disabled=true; animVideo.disabled=true; animFrame.disabled=true; animPlay.textContent='▶ Play';
+    animStatus.textContent = baseData ? 'Press “Generate animation”.' : 'Upload an image, then press “Generate animation”.';
+    if(animOut.width) animOut.getContext('2d').clearRect(0,0,animOut.width,animOut.height);
+  }
+  function aBuildSeq(){
+    aseq=aframes.map((_,i)=>i);
+    if(animOrder.value==='reverse') aseq.reverse();
+    if(animPing.checked && aseq.length>2){ const base=aseq.slice(); for(let i=base.length-2;i>=1;i--) aseq.push(base[i]); }
+  }
+  function aDrawAt(pos){ if(!aframes.length) return; const fi=aseq[((pos%aseq.length)+aseq.length)%aseq.length]; animOut.getContext('2d').drawImage(aframes[fi],0,0); }
+  function aStartTimer(){ if(atimer){clearInterval(atimer);atimer=null;} const fps=Math.max(1,parseInt(animFps.value,10)||12); atimer=setInterval(()=>{ aDrawAt(aseqPos); aseqPos=(aseqPos+1)%aseq.length; },1000/fps); }
+  function aPlay(){ if(aplaying||!aframes.length) return; aplaying=true; animPlay.textContent='⏸ Pause'; aStartTimer(); }
+  function aPause(){ aplaying=false; animPlay.textContent='▶ Play'; if(atimer){clearInterval(atimer);atimer=null;} }
+  animPlay.addEventListener('click',()=>{ aplaying?aPause():aPlay(); });
+
+  animRun.addEventListener('click',()=>{
+    if(!baseData) return;
+    aPause();
+    const scale=Math.min(1, ANIM_MAX_SIDE/Math.max(W,H));
+    const aw=Math.max(2,Math.round(W*scale)), ah=Math.max(2,Math.round(H*scale));
+    const sc=document.createElement('canvas'); sc.width=aw; sc.height=ah;
+    sc.getContext('2d').drawImage(inCanvas,0,0,aw,ah);   // inCanvas holds the original
+    const srcData=sc.getContext('2d').getImageData(0,0,aw,ah);
+    const a=parseInt(chA.value,10), b=parseInt(chB.value,10), axisV=axis.value, modeV=mode.value;
+    const curAmt=parseFloat(amt.value)||0, curIter=Math.max(1,parseInt(iter.value,10)||1);
+    const param=animParam.value;
+    const start=parseFloat(animStart.value)||0, end=parseFloat(animEnd.value)||0;
+    let count=parseInt(animFrames.value,10)||20; count=Math.max(2,Math.min(ANIM_MAX_FRAMES,count));
+    const values=[]; for(let i=0;i<count;i++){ const t=i/(count-1); values.push(start+(end-start)*t); }
+
+    aframes=[]; animRun.disabled=true; animPlay.disabled=true; animVideo.disabled=true; animFrame.disabled=true;
+    animOut.width=aw; animOut.height=ah;
+    let i=0;
+    function step(){
+      if(i>=values.length){ finish(); return; }
+      let shiftPx, iters;
+      if(param==='iter'){ iters=Math.max(1,Math.round(values[i])); shiftPx=Math.round(aw*curAmt/100); }
+      else { shiftPx=Math.round(aw*values[i]/100); iters=curIter; }
+      let out=srcData;
+      for(let k=0;k<iters;k++) out=ChromaFx.shift(out,aw,ah,a,b,axisV,shiftPx,modeV);
+      const fc=document.createElement('canvas'); fc.width=aw; fc.height=ah;
+      fc.getContext('2d').putImageData(out,0,0);
+      aframes.push(fc); i++;
+      animStatus.textContent=`Rendering frame ${i}/${values.length}…`;
+      setTimeout(step,0);
+    }
+    function finish(){
+      aBuildSeq(); aseqPos=0; aDrawAt(0);
+      animRun.disabled=false; animPlay.disabled=false; animFrame.disabled=false;
+      const vt=aPickVideoType(); animVideo.disabled=!vt;
+      animVideo.textContent=vt?`⬇ Download video (${vt.ext.toUpperCase()})`:'⬇ Download video';
+      animStatus.textContent=`${aframes.length} frames · ${aw}×${ah} · ${PARAM_META[param].label} ${start}→${end}`;
+      aPlay();
+    }
+    animStatus.textContent='Rendering frames…'; setTimeout(step,30);
+  });
+
+  function aPickVideoType(){
+    if(typeof MediaRecorder==='undefined' || typeof animOut.captureStream!=='function') return null;
+    const mp4=['video/mp4;codecs=avc1.42E01E','video/mp4;codecs=avc1.4d002a','video/mp4;codecs=avc1','video/mp4;codecs=h264'];
+    const webm=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+    for(const m of mp4)  if(MediaRecorder.isTypeSupported(m)) return {mime:m, ext:'mp4'};
+    for(const m of webm) if(MediaRecorder.isTypeSupported(m)) return {mime:m, ext:'webm'};
+    return null;
+  }
+  animVideo.addEventListener('click',()=>{
+    if(!aframes.length||arecording) return;
+    const vt=aPickVideoType();
+    if(!vt){ alert('Your browser can\'t record video. Use “Frame (PNG)”.'); return; }
+    aPause();
+    const fps=Math.max(1,parseInt(animFps.value,10)||12);
+    let stream, rec;
+    try{ stream=animOut.captureStream(fps); rec=new MediaRecorder(stream,{mimeType:vt.mime}); }
+    catch(err){ alert('Couldn\'t start recording: '+err.message); return; }
+    const chunks=[];
+    rec.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop=()=>{
+      arecording=false; animVideo.disabled=false; animVideo.textContent=`⬇ Download video (${vt.ext.toUpperCase()})`;
+      const blob=new Blob(chunks,{type:vt.mime}), url=URL.createObjectURL(blob);
+      const link=document.createElement('a'); link.href=url; link.download=`chroma_anim.${vt.ext}`;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+      animStatus.textContent=`${vt.ext.toUpperCase()} downloaded · ${aframes.length} frames.`;
+      aPlay();
+    };
+    arecording=true; animVideo.disabled=true; animVideo.textContent='Recording…';
+    const frameMs=1000/fps, minFrames=Math.max(aseq.length, Math.ceil(fps*1.5));
+    const loops=Math.max(1, Math.ceil(minFrames/aseq.length)), total=aseq.length*loops;
+    rec.start();
+    let pos=0;
+    const iv=setInterval(()=>{ aDrawAt(pos); pos++; if(pos>=total){ clearInterval(iv); setTimeout(()=>{ try{rec.stop();}catch(_){} }, frameMs+40); } },frameMs);
+  });
+  animFrame.addEventListener('click',()=>download(animOut,'chroma_anim_frame.png'));
+
+  syncAnimParam();
 })();
 
 /* ================================================================== */
