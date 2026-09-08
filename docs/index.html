@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Image Filters — Boxes · Fill · Chroma Shift · Collage · Vampire · Slideshow · Person</title>
+<title>Image Filters — Boxes · Fill · Chroma Shift · Collage · Vampire · Slideshow · Person · Channel Merge</title>
 <style>
   :root{
     --bg:#0f1115;
@@ -163,6 +163,7 @@
   <button class="tab" data-view="vampire">🧛 Vampire</button>
   <button class="tab" data-view="slideshow">🎬 Slideshow</button>
   <button class="tab" data-view="person">🧍 Person / Background</button>
+  <button class="tab" data-view="channel">🎛️ Channel Merge</button>
 </div>
 
 <main>
@@ -1034,6 +1035,59 @@
         refined mask (grow/shrink + smooth edges apply). Video export uses <code>MediaRecorder</code> and
         prefers <strong>MP4</strong>; if the browser can't record the canvas (e.g. some iOS) use “Frame
         (PNG)”.</p>
+    </div>
+  </section>
+
+  <!-- ================= CHANNEL MERGE ================= -->
+  <section class="view" id="view-channel">
+    <div class="card">
+      <h2>Channel Merge <span class="badge">up to 6 images</span></h2>
+      <p class="desc">Each image becomes one <strong>colour layer</strong> and they're added together
+        (light mixing): image 1 → <span style="color:#ff5b5b">Red</span>, 2 →
+        <span style="color:#5bff5b">Green</span>, 3 → <span style="color:#6e8bff">Blue</span>, 4 →
+        <span style="color:#37d5d5">Cyan</span>, 5 → <span style="color:#e6e64b">Yellow</span>, 6 →
+        <span style="color:#ff6bff">Magenta</span>. Upload up to 6 images, or snap them from the camera
+        (move between shots for a Harris-shutter look). Everything runs locally.</p>
+
+      <div class="filebar">
+        <input type="file" id="chanFiles" accept="image/*" multiple>
+        <button class="ghost" id="chanCam">📷 Camera</button>
+        <button class="ghost" id="chanCapture" disabled>Capture frame</button>
+        <button class="ghost" id="chanClear" disabled>Clear</button>
+        <span class="hint">Added in order; the position sets the colour (R, G, B, C, Y, M).</span>
+      </div>
+
+      <div class="canvas-wrap">
+        <div class="canvas-box" id="chanCamBox" hidden>
+          <strong>Camera</strong>
+          <canvas id="chanCamPreview"></canvas>
+        </div>
+      </div>
+      <div class="thumbs" id="chanThumbs"></div>
+
+      <div class="controls">
+        <div class="control">
+          <label>Size fit</label>
+          <select id="chanFit">
+            <option value="first">To the 1st image's size</option>
+            <option value="min">To the smallest common size</option>
+          </select>
+        </div>
+        <div class="control">
+          <button id="chanRun" disabled>Merge</button>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <div class="canvas-box">
+          <strong>Result</strong>
+          <canvas id="chanOut"></canvas>
+          <button class="dl" id="chanDl" disabled>⬇ Download</button>
+        </div>
+      </div>
+      <p class="hint">Each image is converted to brightness (luminance) and tinted with its assigned
+        colour; the tinted layers are summed and clamped, so overlapping bright areas add toward white.
+        With 3 images it's a classic R/G/B trichrome. Camera capture needs permission and HTTPS.</p>
     </div>
   </section>
 </main>
@@ -3633,6 +3687,111 @@ function attachCamera(btn, onFrame, opts){
     onStart:()=>{ status.textContent='Live camera — segmenting each frame…'; },
     onStop:()=>{ liveBusy=false; status.textContent='Live camera stopped.'; }
   });
+})();
+
+/* ================================================================== */
+/*  CHANNEL MERGE  (each image -> one colour layer, added together)   */
+/* ================================================================== */
+(function(){
+  const filesInput=document.getElementById('chanFiles');
+  const camBtn=document.getElementById('chanCam');
+  const captureBtn=document.getElementById('chanCapture');
+  const clearBtn=document.getElementById('chanClear');
+  const fitSel=document.getElementById('chanFit');
+  const runBtn=document.getElementById('chanRun');
+  const thumbs=document.getElementById('chanThumbs');
+  const camBox=document.getElementById('chanCamBox');
+  const camPreview=document.getElementById('chanCamPreview');
+  const outCanvas=document.getElementById('chanOut');
+  const dlBtn=document.getElementById('chanDl');
+
+  const MAX=6;
+  const COLORS=[[1,0,0],[0,1,0],[0,0,1],[0,1,1],[1,1,0],[1,0,1]];   // R G B C Y M
+  const COLNAMES=['Red','Green','Blue','Cyan','Yellow','Magenta'];
+  const COLCSS=['#ff5b5b','#5bff5b','#6e8bff','#37d5d5','#e6e64b','#ff6bff'];
+  const dimW=s=>s.naturalWidth||s.width, dimH=s=>s.naturalHeight||s.height;
+  let sources=[];                 // up to 6 <img> / <canvas>, in colour order
+  let camActive=false, latestFrame=null;
+
+  function renderThumbs(){
+    thumbs.innerHTML='';
+    sources.forEach((src,i)=>{
+      const t=document.createElement('img');
+      t.src = src.tagName==='IMG' ? src.src : src.toDataURL('image/png');
+      t.style.border='2px solid '+COLCSS[i];
+      t.title=(i+1)+' → '+COLNAMES[i];
+      thumbs.appendChild(t);
+    });
+    clearBtn.disabled = sources.length===0;
+    runBtn.disabled   = sources.length<1;
+  }
+
+  filesInput.addEventListener('change',async e=>{
+    const files=[...e.target.files];
+    for(const f of files){
+      if(sources.length>=MAX){ alert('Up to '+MAX+' images; the extra files were ignored.'); break; }
+      sources.push(await loadImage(f));
+    }
+    renderThumbs();
+  });
+  clearBtn.addEventListener('click',()=>{ sources=[]; renderThumbs(); });
+
+  /* ---- camera capture (up to 6 stills) ---- */
+  function setCam(on){
+    camActive=on;
+    camBtn.textContent=on?'⏹ Stop camera':'📷 Camera';
+    camBtn.classList.toggle('cam-on',on);
+    captureBtn.disabled=!on;
+    camBox.hidden=!on;
+    if(!on) latestFrame=null;
+  }
+  function onCamFrame(frame,w,h){
+    latestFrame=frame;
+    if(camPreview.width!==w||camPreview.height!==h){ camPreview.width=w; camPreview.height=h; }
+    camPreview.getContext('2d').drawImage(frame,0,0);
+  }
+  camBtn.addEventListener('click',async ()=>{
+    if(camActive){ CameraFx.stop(); return; }
+    setCam(true);
+    try{ await CameraFx.start(onCamFrame,{maxSide:640, onStopped:()=>setCam(false)}); }
+    catch(err){ setCam(false); alert('Camera unavailable: '+((err&&err.message)||err)); }
+  });
+  captureBtn.addEventListener('click',()=>{
+    if(!latestFrame || sources.length>=MAX) return;
+    const c=document.createElement('canvas'); c.width=latestFrame.width; c.height=latestFrame.height;
+    c.getContext('2d').drawImage(latestFrame,0,0);
+    sources.push(c); renderThumbs();
+    if(sources.length>=MAX) CameraFx.stop();   // all 6 slots filled — stop the camera
+  });
+
+  /* ---- merge: sum luminance × colour per layer ---- */
+  runBtn.addEventListener('click',()=>{
+    const n=sources.length; if(n<1) return;
+    let W,H;
+    if(fitSel.value==='min'){ W=Math.min(...sources.map(dimW)); H=Math.min(...sources.map(dimH)); }
+    else { W=dimW(sources[0]); H=dimH(sources[0]); }
+    W=Math.max(1,W|0); H=Math.max(1,H|0);
+    const acc=new Float32Array(W*H*3);
+    const tmp=document.createElement('canvas'); tmp.width=W; tmp.height=H;
+    const tctx=tmp.getContext('2d');
+    for(let s=0;s<n;s++){
+      tctx.clearRect(0,0,W,H);
+      tctx.drawImage(sources[s],0,0,W,H);
+      const d=tctx.getImageData(0,0,W,H).data;
+      const cr=COLORS[s][0], cg=COLORS[s][1], cb=COLORS[s][2];
+      for(let i=0,p=0;i<W*H;i++,p+=4){
+        const g=0.2126*d[p]+0.7152*d[p+1]+0.0722*d[p+2];   // luminance of this image
+        const k=i*3; acc[k]+=g*cr; acc[k+1]+=g*cg; acc[k+2]+=g*cb;
+      }
+    }
+    const id=new ImageData(W,H), od=id.data;     // Uint8Clamped auto-clamps the additive sum
+    for(let i=0,p=0;i<W*H;i++,p+=4){ const k=i*3; od[p]=acc[k]; od[p+1]=acc[k+1]; od[p+2]=acc[k+2]; od[p+3]=255; }
+    outCanvas.width=W; outCanvas.height=H;
+    outCanvas.getContext('2d').putImageData(id,0,0);
+    dlBtn.disabled=false;
+  });
+
+  dlBtn.addEventListener('click',()=>download(outCanvas,'channel_merge.png'));
 })();
 </script>
 </body>
