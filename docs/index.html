@@ -16,6 +16,7 @@
     --accent-2:#7ee787;
     --danger:#ff7b72;
     --radius:14px;
+    --preview-max:380px;   /* cap on preview/output canvas height — set live by the Preview size control */
   }
   *{box-sizing:border-box}
   [hidden]{display:none!important}
@@ -132,6 +133,18 @@
     max-width:100%;height:auto;background:#0b0d12;
     border:1px solid var(--border);border-radius:10px;
   }
+  /* Preview / output canvases are capped in height so both the original and the
+     modified image stay visible without long scrolling. width stays auto, so the
+     aspect ratio is preserved as it shrinks. Thumbnails (.thumbs / .chan-layer)
+     live outside .canvas-wrap and are unaffected. */
+  .canvas-wrap canvas{max-height:var(--preview-max)}
+  .previewbar{
+    display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
+    max-width:1100px;margin:2px auto 0;padding:8px 16px;color:var(--muted);
+  }
+  .previewbar label{font-size:.78rem;text-transform:uppercase;letter-spacing:.5px}
+  .previewbar input[type=range]{width:min(240px,42vw)}
+  .previewbar .val{color:var(--accent-2);font-weight:600;min-width:104px;font-size:.82rem}
   .thumbs{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
   .thumbs img{height:64px;border-radius:8px;border:1px solid var(--border)}
   .chan-layer{display:flex;flex-direction:column;gap:5px;width:120px}
@@ -168,6 +181,12 @@
   <button class="tab" data-view="slideshow">🎬 Slideshow</button>
   <button class="tab" data-view="person">🧍 Person / Background</button>
   <button class="tab" data-view="channel">🎛️ Channel Merge</button>
+</div>
+
+<div class="previewbar">
+  <label for="previewSize">Preview size</label>
+  <input type="range" id="previewSize" min="160" max="900" step="20" value="380">
+  <span class="val" id="previewSizeVal">Medium · 380px</span>
 </div>
 
 <main>
@@ -1114,6 +1133,28 @@ document.querySelectorAll('.tab').forEach(tab=>{
     document.getElementById('view-'+tab.dataset.view).classList.add('active');
   });
 });
+
+/* ------------------------------------------------------------------ */
+/*  Preview size — one global control that caps the height of every    */
+/*  preview/output canvas (var --preview-max) across all sections.     */
+/* ------------------------------------------------------------------ */
+(function(){
+  const KEY='previewMaxPx';
+  const slider=document.getElementById('previewSize');
+  const readout=document.getElementById('previewSizeVal');
+  const word=v=> v<260?'Small' : v<440?'Medium' : v<680?'Large' : 'Full';
+  function apply(v){
+    v=Math.max(160,Math.min(900,v|0));
+    document.documentElement.style.setProperty('--preview-max',v+'px');
+    slider.value=v;
+    readout.textContent=word(v)+' · '+v+'px';
+    try{ localStorage.setItem(KEY,String(v)); }catch(e){}
+  }
+  let saved=380;
+  try{ const s=parseInt(localStorage.getItem(KEY),10); if(!isNaN(s)) saved=s; }catch(e){}
+  apply(saved);
+  slider.addEventListener('input',()=>apply(parseInt(slider.value,10)||380));
+})();
 
 /* helpers ----------------------------------------------------------- */
 function loadImage(file){
