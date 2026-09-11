@@ -64,13 +64,15 @@ Para no agotar la memoria del navegador, el número de cuadros y el tamaño de l
 animación se limitan automáticamente.
 
 ### 2. 🪣 Horizontal / Vertical Fill
-Selecciona una imagen y, a partir de un **porcentaje de inicio** y una
-**dirección**, replica la fila o columna de ese borde para rellenar el resto de
-la imagen.
+Selecciona una imagen y, a partir de un porcentaje de **inicio** y de **fin** y una
+**dirección**, replica una fila o columna sobre esa **franja** para rellenar la región;
+la dirección indica qué borde de la franja es la línea de origen «congelada».
 
 Parámetros:
 - **Dirección:** `left`, `right`, `up`, `down`.
-- **Inicio del relleno:** porcentaje (0–100 %).
+- **Inicio / fin del relleno:** dos deslizadores (0–100 %) que definen la franja a
+  rellenar. Están enlazados para que el inicio nunca supere al fin. Por defecto 0 %–30 %
+  (equivale al relleno de borde anterior). Fuera de la franja la imagen queda intacta.
 - **Modo diagonal (nuevo):** rellena a lo largo de una recta diagonal definida por un
   punto de inicio en **X (%)**, en **Y (%)** y una **pendiente**. Los píxeles de esa
   recta se replican sobre el semiplano del lado de relleno, generando franjas diagonales.
