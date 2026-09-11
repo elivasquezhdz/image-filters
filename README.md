@@ -11,6 +11,11 @@ servidor.
 
 Todos los filtros permiten **descargar** la imagen modificada.
 
+Un control global **Tamaño de vista previa** (debajo de las pestañas) ajusta con un
+deslizador la **altura máxima** de todas las vistas previas (original y modificada) en
+cada sección, de compacto (160 px) a completo (900 px), para evitar tener que
+desplazarse tanto. La preferencia se recuerda entre visitas.
+
 Las secciones de **una sola imagen** (Horizontal / Vertical Fill, Chroma Shift, 4-Way
 Collage, Vampire y Person / Background) incluyen además un botón **📷 Live camera** que
 aplica el efecto **en vivo** sobre la cámara y muestra solo el resultado (no la imagen
