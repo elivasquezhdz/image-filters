@@ -11,6 +11,11 @@ servidor.
 
 Todos los filtros permiten **descargar** la imagen modificada.
 
+En la barra de pestañas los filtros están **agrupados según cuántas fotos usan**:
+**Single image** (1 foto) — Horizontal / Vertical Fill, Chroma Shift, 4-Way Collage,
+Vampire y Person / Background; y **Multiple images** (2 o más) — Boxes, Slideshow y
+Channel Merge.
+
 Un control global **Tamaño de vista previa** (debajo de las pestañas) ajusta con un
 deslizador la **altura máxima** de todas las vistas previas (original y modificada) en
 cada sección, de compacto (160 px) a completo (900 px), para evitar tener que

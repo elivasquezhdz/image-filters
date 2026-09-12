@@ -43,14 +43,14 @@
     color:var(--muted);
     font-size:.98rem;
   }
-  .tabs{
-    display:flex;
-    gap:8px;
-    justify-content:center;
-    flex-wrap:wrap;
-    margin:22px auto 6px;
-    padding:0 12px;
-  }
+  /* Tabs are split into two labelled groups: filters that take one photo and
+     filters that take several. */
+  .tabgroups{display:flex;flex-direction:column;gap:16px;margin:22px auto 6px;padding:0 12px;max-width:1000px}
+  .tabgroup{display:flex;flex-direction:column;align-items:center;gap:9px}
+  .tabgroup + .tabgroup{border-top:1px dashed var(--border);padding-top:16px}
+  .tabgroup-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:8px}
+  .tabgroup-label .count{color:var(--accent);background:var(--panel-2);border:1px solid var(--border);border-radius:999px;padding:1px 8px;font-size:.68rem;font-weight:600;letter-spacing:.3px}
+  .tabrow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
   .tab{
     background:var(--panel);
     border:1px solid var(--border);
@@ -172,15 +172,25 @@
      Everything runs locally in your browser — your images are never uploaded to any server.</p>
 </header>
 
-<div class="tabs">
-  <button class="tab active" data-view="boxes">🧩 Boxes</button>
-  <button class="tab" data-view="fill">🪣 Horizontal / Vertical Fill</button>
-  <button class="tab" data-view="chroma">🌈 Chroma Shift</button>
-  <button class="tab" data-view="collage">🪞 4-Way Collage</button>
-  <button class="tab" data-view="vampire">🧛 Vampire</button>
-  <button class="tab" data-view="slideshow">🎬 Slideshow</button>
-  <button class="tab" data-view="person">🧍 Person / Background</button>
-  <button class="tab" data-view="channel">🎛️ Channel Merge</button>
+<div class="tabgroups">
+  <div class="tabgroup">
+    <div class="tabgroup-label">Single image <span class="count">1 photo</span></div>
+    <div class="tabrow">
+      <button class="tab active" data-view="fill">🪣 Horizontal / Vertical Fill</button>
+      <button class="tab" data-view="chroma">🌈 Chroma Shift</button>
+      <button class="tab" data-view="collage">🪞 4-Way Collage</button>
+      <button class="tab" data-view="vampire">🧛 Vampire</button>
+      <button class="tab" data-view="person">🧍 Person / Background</button>
+    </div>
+  </div>
+  <div class="tabgroup">
+    <div class="tabgroup-label">Multiple images <span class="count">2+ photos</span></div>
+    <div class="tabrow">
+      <button class="tab" data-view="boxes">🧩 Boxes</button>
+      <button class="tab" data-view="slideshow">🎬 Slideshow</button>
+      <button class="tab" data-view="channel">🎛️ Channel Merge</button>
+    </div>
+  </div>
 </div>
 
 <div class="previewbar">
@@ -191,7 +201,7 @@
 
 <main>
   <!-- ================= BOXES ================= -->
-  <section class="view active" id="view-boxes">
+  <section class="view" id="view-boxes">
     <div class="card">
       <h2>Boxes <span class="badge">2–5 images</span></h2>
       <p class="desc">Splits each image into an <em>N×N</em> grid and combines the cells, interleaving
@@ -373,7 +383,7 @@
   </section>
 
   <!-- ================= FILL ================= -->
-  <section class="view" id="view-fill">
+  <section class="view active" id="view-fill">
     <div class="card">
       <h2>Horizontal / Vertical Fill</h2>
       <p class="desc">From a <strong>start</strong> and <strong>stop</strong> percentage and a direction,
