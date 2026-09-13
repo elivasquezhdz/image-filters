@@ -69,15 +69,18 @@ Para no agotar la memoria del navegador, el número de cuadros y el tamaño de l
 animación se limitan automáticamente.
 
 ### 2. 🪣 Horizontal / Vertical Fill
-Selecciona una imagen y, a partir de un porcentaje de **inicio** y de **fin** y una
-**dirección**, replica una fila o columna sobre esa **franja** para rellenar la región;
-la dirección indica qué borde de la franja es la línea de origen «congelada».
+Selecciona una imagen y, según una **dirección**, replica una fila o columna para
+rellenar una **región rectangular**; la dirección indica qué borde del rectángulo es la
+línea de origen «congelada».
 
 Parámetros:
 - **Dirección:** `left`, `right`, `up`, `down`.
-- **Inicio / fin del relleno:** dos deslizadores (0–100 %) que definen la franja a
-  rellenar. Están enlazados para que el inicio nunca supere al fin. Por defecto 0 %–30 %
-  (equivale al relleno de borde anterior). Fuera de la franja la imagen queda intacta.
+- **Start X / Start Y:** dos deslizadores (0–100 %) que fijan la **esquina** donde
+  empieza el relleno.
+- **Stop:** acota el relleno a lo largo de la dirección. Junto con Start X/Y define el
+  **rectángulo** que se rellena; fuera de él la imagen queda intacta. El start del eje de
+  la dirección y el Stop están enlazados para que el inicio nunca supere al fin. Por
+  defecto Start X = 0 %, Start Y = 0 %, Stop = 30 %.
 - **Modo diagonal (nuevo):** rellena a lo largo de una recta diagonal definida por un
   punto de inicio en **X (%)**, en **Y (%)** y una **pendiente**. Los píxeles de esa
   recta se replican sobre el semiplano del lado de relleno, generando franjas diagonales.
@@ -181,8 +184,10 @@ Parámetros:
   **desenfoque (Blur)** — p. ej. un fondo tipo retrato; la otra parte queda intacta. El
   collage muestra un control de **secciones** (2–60), el chroma **desplazamiento**, **eje** e
   **iteraciones** (recursivo, 1–20),
-  la baja resolución un **tamaño de píxel**, el fill una **dirección** y un **inicio del
-  relleno (%)**, y el blur un **radio (px)**.
+  la baja resolución un **tamaño de píxel**, el **Horizontal / Vertical Fill** ahora con
+  **todas** las funcionalidades de su sección (dirección incl. **diagonal**, **Start X /
+  Start Y / Stop** de región rectangular, **pendiente** en diagonal y **modo combinado**),
+  y el blur un **radio (px)**.
 - **Umbral de máscara (threshold):** cuánta parte de la máscara suave cuenta como «persona».
 - **Crecer / encoger (grow / shrink):** dilata (+) o erosiona (−) la máscara en píxeles para
   cubrir zonas que el modelo se dejó o recortar lo que sobra.
