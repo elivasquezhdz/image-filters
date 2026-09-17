@@ -75,12 +75,11 @@ línea de origen «congelada».
 
 Parámetros:
 - **Dirección:** `left`, `right`, `up`, `down`.
-- **Start X / Start Y:** dos deslizadores (0–100 %) que fijan la **esquina** donde
-  empieza el relleno.
-- **Stop:** acota el relleno a lo largo de la dirección. Junto con Start X/Y define el
-  **rectángulo** que se rellena; fuera de él la imagen queda intacta. El start del eje de
-  la dirección y el Stop están enlazados para que el inicio nunca supere al fin. Por
-  defecto Start X = 0 %, Start Y = 0 %, Stop = 30 %.
+- **Start X / Stop X / Start Y / Stop Y:** cuatro deslizadores (0–100 %) que definen el
+  **rectángulo** a rellenar (`X∈[Start X, Stop X]`, `Y∈[Start Y, Stop Y]`); fuera de él la
+  imagen queda intacta. En cada eje el start y el stop están enlazados para que el inicio
+  nunca supere al fin. Por defecto Start X = 0 %, Stop X = 30 %, Start Y = 0 %, Stop Y = 100 %.
+  La **dirección** indica qué borde del rectángulo es la línea de origen «congelada».
 - **Modo diagonal (nuevo):** rellena a lo largo de una recta diagonal definida por un
   punto de inicio en **X (%)**, en **Y (%)** y una **pendiente**. Los píxeles de esa
   recta se replican sobre el semiplano del lado de relleno, generando franjas diagonales.
@@ -186,8 +185,8 @@ Parámetros:
   **iteraciones** (recursivo, 1–20),
   la baja resolución un **tamaño de píxel**, el **Horizontal / Vertical Fill** ahora con
   **todas** las funcionalidades de su sección (dirección incl. **diagonal**, **Start X /
-  Start Y / Stop** de región rectangular, **pendiente** en diagonal y **modo combinado**),
-  y el blur un **radio (px)**.
+  Stop X / Start Y / Stop Y** de región rectangular, **pendiente** en diagonal y **modo
+  combinado**), y el blur un **radio (px)**.
 - **Umbral de máscara (threshold):** cuánta parte de la máscara suave cuenta como «persona».
 - **Crecer / encoger (grow / shrink):** dilata (+) o erosiona (−) la máscara en píxeles para
   cubrir zonas que el modelo se dejó o recortar lo que sobra.
