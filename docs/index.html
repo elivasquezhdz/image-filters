@@ -386,9 +386,9 @@
   <section class="view active" id="view-fill">
     <div class="card">
       <h2>Horizontal / Vertical Fill</h2>
-      <p class="desc">Replicates one row or column to fill a region. <strong>Start X</strong> and
-        <strong>Start Y</strong> set the corner where the fill begins and <strong>Stop</strong> bounds it
-        along the direction, so the fill is confined to that rectangle — the rest stays original. Also has a
+      <p class="desc">Replicates one row or column to fill a region. <strong>Start X / Stop X</strong> and
+        <strong>Start Y / Stop Y</strong> define the rectangle to fill; the direction picks which edge is the
+        frozen source line. Everything outside the rectangle stays original. Also has a
         <strong>diagonal</strong> mode and a <strong>combined mode</strong> (horizontal + vertical at once).</p>
 
       <div class="filebar">
@@ -412,13 +412,17 @@
           <label>Start X · <span class="val" id="fillStartXVal">0%</span></label>
           <input type="range" id="fillStartX" min="0" max="100" value="0">
         </div>
+        <div class="control" id="fillStopXControl">
+          <label>Stop X · <span class="val" id="fillStopXVal">30%</span></label>
+          <input type="range" id="fillStopX" min="0" max="100" value="30">
+        </div>
         <div class="control" id="fillStartYControl">
           <label>Start Y · <span class="val" id="fillStartYVal">0%</span></label>
           <input type="range" id="fillStartY" min="0" max="100" value="0">
         </div>
-        <div class="control" id="fillStopControl">
-          <label>Stop · <span class="val" id="fillStopVal">30%</span></label>
-          <input type="range" id="fillStop" min="0" max="100" value="30">
+        <div class="control" id="fillStopYControl">
+          <label>Stop Y · <span class="val" id="fillStopYVal">100%</span></label>
+          <input type="range" id="fillStopY" min="0" max="100" value="100">
         </div>
       </div>
 
@@ -952,13 +956,17 @@
           <label>Start X · <span class="val" id="personFillStartXVal">0%</span></label>
           <input type="range" id="personFillStartX" min="0" max="100" step="1" value="0">
         </div>
+        <div class="control" id="personFillStopXCtl" style="display:none">
+          <label>Stop X · <span class="val" id="personFillStopXVal">30%</span></label>
+          <input type="range" id="personFillStopX" min="0" max="100" step="1" value="30">
+        </div>
         <div class="control" id="personFillStartYCtl" style="display:none">
           <label>Start Y · <span class="val" id="personFillStartYVal">0%</span></label>
           <input type="range" id="personFillStartY" min="0" max="100" step="1" value="0">
         </div>
-        <div class="control" id="personFillStopCtl" style="display:none">
-          <label>Stop · <span class="val" id="personFillStopVal">30%</span></label>
-          <input type="range" id="personFillStop" min="0" max="100" step="1" value="30">
+        <div class="control" id="personFillStopYCtl" style="display:none">
+          <label>Stop Y · <span class="val" id="personFillStopYVal">100%</span></label>
+          <input type="range" id="personFillStopY" min="0" max="100" step="1" value="100">
         </div>
         <div class="control" id="personFillDxCtl" style="display:none">
           <label>Start X · <span class="val" id="personFillDxVal">50%</span></label>
@@ -1472,54 +1480,47 @@ const FillFx=(function(){
     }
     return out;
   }
-  // Rectangular fill: confine the smear to a box anchored at (startX, startY).
-  // Along the fill direction the box runs from the start to `stopPct`; on the
-  // perpendicular axis it runs from its start to the far edge. The source line
-  // is the box edge the direction points away from (left/up = far edge, right/
-  // down = near edge). Pixels outside the box stay original.
-  function fillRect(srcData,w,h,direction,startX,startY,stopPct){
+  // Rectangular fill: confine the smear to the box X∈[startX,stopX], Y∈[startY,
+  // stopY] (all fractions 0..1). The source line is the box edge the direction
+  // points away from (left/up = far edge, right/down = near edge) and is
+  // replicated across the box. Pixels outside the box stay original.
+  function fillRect(srcData,w,h,direction,startX,startY,stopX,stopY){
     const out=new ImageData(new Uint8ClampedArray(srcData.data),w,h);
     const s=srcData.data, d=out.data;
     const cx=v=>v<0?0:(v>w?w:v), cy=v=>v<0?0:(v>h?h:v);
-    const sx=Math.max(0,Math.min(1,startX)), sy=Math.max(0,Math.min(1,startY));
-    const st=Math.max(0,Math.min(1,stopPct));
+    const f=v=>Math.max(0,Math.min(1,v));
+    let x0=cx(Math.floor(w*f(startX))), x1=cx(Math.floor(w*f(stopX)));
+    let y0=cy(Math.floor(h*f(startY))), y1=cy(Math.floor(h*f(stopY)));
+    if(x0>x1){ const t=x0; x0=x1; x1=t; }
+    if(y0>y1){ const t=y0; y0=y1; y1=t; }
+    if(x1<=x0 || y1<=y0) return out;
     if(direction==='left'||direction==='right'){
-      let xa=cx(Math.floor(w*sx)), xb=cx(Math.floor(w*st));
-      if(xa>xb){ const t=xa; xa=xb; xb=t; }          // band along X
-      const ya=cy(Math.floor(h*sy)), yb=h;            // rows from startY to bottom
-      if(xb>xa && yb>ya){
-        const srcX = direction==='right' ? xa : Math.min(xb,w-1);
-        for(let y=ya;y<yb;y++){
-          const sb=(y*w+srcX)*4, r=s[sb],g=s[sb+1],b=s[sb+2],a=s[sb+3];
-          for(let x=xa;x<xb;x++){ const t=(y*w+x)*4; d[t]=r;d[t+1]=g;d[t+2]=b;d[t+3]=a; }
-        }
+      const srcX = direction==='right' ? x0 : Math.min(x1,w-1);   // near / far edge
+      for(let y=y0;y<y1;y++){
+        const sb=(y*w+srcX)*4, r=s[sb],g=s[sb+1],b=s[sb+2],a=s[sb+3];
+        for(let x=x0;x<x1;x++){ const t=(y*w+x)*4; d[t]=r;d[t+1]=g;d[t+2]=b;d[t+3]=a; }
       }
-    }else if(direction==='up'||direction==='down'){
-      let ya=cy(Math.floor(h*sy)), yb=cy(Math.floor(h*st));
-      if(ya>yb){ const t=ya; ya=yb; yb=t; }          // band along Y
-      const xa=cx(Math.floor(w*sx)), xb=w;            // cols from startX to right
-      if(yb>ya && xb>xa){
-        const srcY = direction==='down' ? ya : Math.min(yb,h-1);
-        for(let x=xa;x<xb;x++){
-          const sb=(srcY*w+x)*4, r=s[sb],g=s[sb+1],b=s[sb+2],a=s[sb+3];
-          for(let y=ya;y<yb;y++){ const t=(y*w+x)*4; d[t]=r;d[t+1]=g;d[t+2]=b;d[t+3]=a; }
-        }
+    }else{ // up / down
+      const srcY = direction==='down' ? y0 : Math.min(y1,h-1);
+      for(let x=x0;x<x1;x++){
+        const sb=(srcY*w+x)*4, r=s[sb],g=s[sb+1],b=s[sb+2],a=s[sb+3];
+        for(let y=y0;y<y1;y++){ const t=(y*w+x)*4; d[t]=r;d[t+1]=g;d[t+2]=b;d[t+3]=a; }
       }
     }
     return out;
   }
   // One entry point for every fill mode, shared by the standalone Fill section
   // and the Person/Background fill operation.
-  //   p = { diagonal, combined, dir, startX, startY, stop,   // single (fractions)
-  //         dx, dy, slope,                                    // diagonal
-  //         hDir, hStart, vDir, vStart }                      // combined (fractions)
+  //   p = { diagonal, combined, dir, startX, startY, stopX, stopY,  // rectangular
+  //         dx, dy, slope,                                          // diagonal
+  //         hDir, hStart, vDir, vStart }                            // combined
   function apply(srcData,w,h,p){
     if(p.diagonal) return fillDiagonal(srcData,w,h,p.dx,p.dy,p.slope);
     if(p.combined){
       let r=fillDirection(srcData,w,h,p.hDir,p.hStart);   // legacy edge-anchored band
       return fillDirection(r,w,h,p.vDir,p.vStart);
     }
-    return fillRect(srcData,w,h,p.dir,p.startX,p.startY,p.stop);
+    return fillRect(srcData,w,h,p.dir,p.startX,p.startY,p.stopX,p.stopY);
   }
   return {fillDirection, fillDiagonal, fillRect, apply};
 })();
@@ -1975,10 +1976,9 @@ function attachCamera(btn, onFrame, opts){
   const outCanvas=document.getElementById('fillOut');
   const dir=document.getElementById('fillDir');
   const startX=document.getElementById('fillStartX'), startXVal=document.getElementById('fillStartXVal'), startXControl=document.getElementById('fillStartXControl');
+  const stopX=document.getElementById('fillStopX'), stopXVal=document.getElementById('fillStopXVal'), stopXControl=document.getElementById('fillStopXControl');
   const startY=document.getElementById('fillStartY'), startYVal=document.getElementById('fillStartYVal'), startYControl=document.getElementById('fillStartYControl');
-  const stop=document.getElementById('fillStop');
-  const stopVal=document.getElementById('fillStopVal');
-  const stopControl=document.getElementById('fillStopControl');
+  const stopY=document.getElementById('fillStopY'), stopYVal=document.getElementById('fillStopYVal'), stopYControl=document.getElementById('fillStopYControl');
   const combine=document.getElementById('fillCombine');
   const combineCtl=document.getElementById('fillCombineControls');
   const hDir=document.getElementById('fillHDir'), hPct=document.getElementById('fillHPct'), hPctVal=document.getElementById('fillHPctVal');
@@ -1996,8 +1996,9 @@ function attachCamera(btn, onFrame, opts){
     const diag = dir.value==='diagonal';
     diagControls.style.display = diag ? 'flex' : 'none';
     startXControl.style.display = diag ? 'none' : 'flex';
+    stopXControl.style.display  = diag ? 'none' : 'flex';
     startYControl.style.display = diag ? 'none' : 'flex';
-    stopControl.style.display   = diag ? 'none' : 'flex';
+    stopYControl.style.display  = diag ? 'none' : 'flex';
     combineBlock.style.display  = diag ? 'none' : 'block';
   }
 
@@ -2006,7 +2007,8 @@ function attachCamera(btn, onFrame, opts){
       diagonal: dir.value==='diagonal',
       combined: combine.checked,
       dir: dir.value,
-      startX: parseInt(startX.value,10)/100, startY: parseInt(startY.value,10)/100, stop: parseInt(stop.value,10)/100,
+      startX: parseInt(startX.value,10)/100, stopX: parseInt(stopX.value,10)/100,
+      startY: parseInt(startY.value,10)/100, stopY: parseInt(stopY.value,10)/100,
       dx: parseFloat(dx.value)/100, dy: parseFloat(dy.value)/100, slope: parseFloat(slope.value),
       hDir: hDir.value, hStart: parseFloat(hPct.value)/100, vDir: vDir.value, vStart: parseFloat(vPct.value)/100
     };
@@ -2031,24 +2033,12 @@ function attachCamera(btn, onFrame, opts){
     render();
   });
 
-  // Along the fill direction (X for left/right, Y for up/down) the start must
-  // not pass the stop; they stay linked. The perpendicular start is free.
-  const isH=()=>dir.value==='left'||dir.value==='right';
-  const isV=()=>dir.value==='up'||dir.value==='down';
-  function syncFillLabels(){ startXVal.textContent=startX.value+'%'; startYVal.textContent=startY.value+'%'; stopVal.textContent=stop.value+'%'; }
-  startX.addEventListener('input',()=>{
-    if(isH() && parseInt(startX.value,10)>parseInt(stop.value,10)) stop.value=startX.value;
-    syncFillLabels(); render();
-  });
-  startY.addEventListener('input',()=>{
-    if(isV() && parseInt(startY.value,10)>parseInt(stop.value,10)) stop.value=startY.value;
-    syncFillLabels(); render();
-  });
-  stop.addEventListener('input',()=>{
-    if(isH() && parseInt(stop.value,10)<parseInt(startX.value,10)) startX.value=stop.value;
-    if(isV() && parseInt(stop.value,10)<parseInt(startY.value,10)) startY.value=stop.value;
-    syncFillLabels(); render();
-  });
+  // On each axis the start must not pass the stop; they stay linked.
+  function syncFillLabels(){ startXVal.textContent=startX.value+'%'; stopXVal.textContent=stopX.value+'%'; startYVal.textContent=startY.value+'%'; stopYVal.textContent=stopY.value+'%'; }
+  startX.addEventListener('input',()=>{ if(+startX.value>+stopX.value) stopX.value=startX.value; syncFillLabels(); render(); });
+  stopX.addEventListener('input', ()=>{ if(+stopX.value<+startX.value) startX.value=stopX.value; syncFillLabels(); render(); });
+  startY.addEventListener('input',()=>{ if(+startY.value>+stopY.value) stopY.value=startY.value; syncFillLabels(); render(); });
+  stopY.addEventListener('input', ()=>{ if(+stopY.value<+startY.value) startY.value=stopY.value; syncFillLabels(); render(); });
   dir.addEventListener('change',()=>{updateFillUI();render();});
   dx.addEventListener('input',()=>{dxVal.textContent=dx.value+'%';render();});
   dy.addEventListener('input',()=>{dyVal.textContent=dy.value+'%';render();});
@@ -3377,8 +3367,9 @@ function attachCamera(btn, onFrame, opts){
   const fillDir=document.getElementById('personFillDir');
   const fillDirCtl=document.getElementById('personFillDirCtl');
   const fillStartX=document.getElementById('personFillStartX'), fillStartXVal=document.getElementById('personFillStartXVal'), fillStartXCtl=document.getElementById('personFillStartXCtl');
+  const fillStopX=document.getElementById('personFillStopX'), fillStopXVal=document.getElementById('personFillStopXVal'), fillStopXCtl=document.getElementById('personFillStopXCtl');
   const fillStartY=document.getElementById('personFillStartY'), fillStartYVal=document.getElementById('personFillStartYVal'), fillStartYCtl=document.getElementById('personFillStartYCtl');
-  const fillStop=document.getElementById('personFillStop'), fillStopVal=document.getElementById('personFillStopVal'), fillStopCtl=document.getElementById('personFillStopCtl');
+  const fillStopY=document.getElementById('personFillStopY'), fillStopYVal=document.getElementById('personFillStopYVal'), fillStopYCtl=document.getElementById('personFillStopYCtl');
   const fillDx=document.getElementById('personFillDx'), fillDxVal=document.getElementById('personFillDxVal'), fillDxCtl=document.getElementById('personFillDxCtl');
   const fillDy=document.getElementById('personFillDy'), fillDyVal=document.getElementById('personFillDyVal'), fillDyCtl=document.getElementById('personFillDyCtl');
   const fillSlope=document.getElementById('personFillSlope'), fillSlopeVal=document.getElementById('personFillSlopeVal'), fillSlopeCtl=document.getElementById('personFillSlopeCtl');
@@ -3422,8 +3413,9 @@ function attachCamera(btn, onFrame, opts){
   chromaAmtVal.textContent=chromaAmt.value+'%';
   lowresVal.textContent=lowres.value+' px';
   fillStartXVal.textContent=fillStartX.value+'%';
+  fillStopXVal.textContent=fillStopX.value+'%';
   fillStartYVal.textContent=fillStartY.value+'%';
-  fillStopVal.textContent=fillStop.value+'%';
+  fillStopYVal.textContent=fillStopY.value+'%';
   fillDxVal.textContent=fillDx.value+'%';
   fillDyVal.textContent=fillDy.value+'%';
   fillSlopeVal.textContent=parseFloat(fillSlope.value).toFixed(1);
@@ -3439,13 +3431,12 @@ function attachCamera(btn, onFrame, opts){
   chromaIter.addEventListener('input',()=>{ chromaIterVal.textContent=chromaIter.value; if(procAlpha) renderResult(); });
   lowres.addEventListener('input',()=>{ lowresVal.textContent=lowres.value+' px'; if(procAlpha) renderResult(); });
   const pReRender=()=>{ if(procAlpha) renderResult(); };
-  const fillIsH=()=>fillDir.value==='left'||fillDir.value==='right';
-  const fillIsV=()=>fillDir.value==='up'||fillDir.value==='down';
-  function syncFillLabels(){ fillStartXVal.textContent=fillStartX.value+'%'; fillStartYVal.textContent=fillStartY.value+'%'; fillStopVal.textContent=fillStop.value+'%'; }
+  function syncFillLabels(){ fillStartXVal.textContent=fillStartX.value+'%'; fillStopXVal.textContent=fillStopX.value+'%'; fillStartYVal.textContent=fillStartY.value+'%'; fillStopYVal.textContent=fillStopY.value+'%'; }
   fillDir.addEventListener('change',()=>{ syncFillUI(); pReRender(); });
-  fillStartX.addEventListener('input',()=>{ if(fillIsH() && +fillStartX.value>+fillStop.value) fillStop.value=fillStartX.value; syncFillLabels(); pReRender(); });
-  fillStartY.addEventListener('input',()=>{ if(fillIsV() && +fillStartY.value>+fillStop.value) fillStop.value=fillStartY.value; syncFillLabels(); pReRender(); });
-  fillStop.addEventListener('input',()=>{ if(fillIsH() && +fillStop.value<+fillStartX.value) fillStartX.value=fillStop.value; if(fillIsV() && +fillStop.value<+fillStartY.value) fillStartY.value=fillStop.value; syncFillLabels(); pReRender(); });
+  fillStartX.addEventListener('input',()=>{ if(+fillStartX.value>+fillStopX.value) fillStopX.value=fillStartX.value; syncFillLabels(); pReRender(); });
+  fillStopX.addEventListener('input', ()=>{ if(+fillStopX.value<+fillStartX.value) fillStartX.value=fillStopX.value; syncFillLabels(); pReRender(); });
+  fillStartY.addEventListener('input',()=>{ if(+fillStartY.value>+fillStopY.value) fillStopY.value=fillStartY.value; syncFillLabels(); pReRender(); });
+  fillStopY.addEventListener('input', ()=>{ if(+fillStopY.value<+fillStartY.value) fillStartY.value=fillStopY.value; syncFillLabels(); pReRender(); });
   fillDx.addEventListener('input',()=>{ fillDxVal.textContent=fillDx.value+'%'; pReRender(); });
   fillDy.addEventListener('input',()=>{ fillDyVal.textContent=fillDy.value+'%'; pReRender(); });
   fillSlope.addEventListener('input',()=>{ fillSlopeVal.textContent=parseFloat(fillSlope.value).toFixed(1); pReRender(); });
@@ -3464,8 +3455,9 @@ function attachCamera(btn, onFrame, opts){
     const on=opSel.value==='fill', diag=fillDir.value==='diagonal';
     fillDirCtl.style.display    = on ? 'flex' : 'none';
     fillStartXCtl.style.display = on && !diag ? 'flex' : 'none';
+    fillStopXCtl.style.display  = on && !diag ? 'flex' : 'none';
     fillStartYCtl.style.display = on && !diag ? 'flex' : 'none';
-    fillStopCtl.style.display   = on && !diag ? 'flex' : 'none';
+    fillStopYCtl.style.display  = on && !diag ? 'flex' : 'none';
     fillDxCtl.style.display     = on && diag ? 'flex' : 'none';
     fillDyCtl.style.display     = on && diag ? 'flex' : 'none';
     fillSlopeCtl.style.display  = on && diag ? 'flex' : 'none';
@@ -3531,11 +3523,11 @@ function attachCamera(btn, onFrame, opts){
       diagonal: fillDir.value==='diagonal',
       combined: fillCombine.checked,
       dir: fillDir.value,
-      startX:+fillStartX.value/100, startY:+fillStartY.value/100, stop:+fillStop.value/100,
+      startX:+fillStartX.value/100, stopX:+fillStopX.value/100, startY:+fillStartY.value/100, stopY:+fillStopY.value/100,
       dx:+fillDx.value/100, dy:+fillDy.value/100, slope:parseFloat(fillSlope.value),
       hDir:fillHDir.value, hStart:+fillHPct.value/100, vDir:fillVDir.value, vStart:+fillVPct.value/100
     };
-    const key=[p.diagonal?'D':p.combined?'C':'S',p.dir,p.startX,p.startY,p.stop,p.dx,p.dy,p.slope,p.hDir,p.hStart,p.vDir,p.vStart].join('_');
+    const key=[p.diagonal?'D':p.combined?'C':'S',p.dir,p.startX,p.stopX,p.startY,p.stopY,p.dx,p.dy,p.slope,p.hDir,p.hStart,p.vDir,p.vStart].join('_');
     if(fillData && fillKey===key) return fillData;
     fillData=FillFx.apply(baseData,W,H,p).data;
     fillKey=key;
